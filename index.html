@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenAtlas Vocabulary Viewer — Demo</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background: #f6f7f9;
+      color: #1a1a1a;
+    }
+    h1 { margin-top: 0; }
+    .demo-wrap { max-width: 1100px; margin: 0 auto; }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .75rem;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: #fff;
+      border: 1px solid #e2e5e9;
+      border-radius: .5rem;
+    }
+    .controls label { font-weight: 600; font-size: .9rem; }
+    .controls input, .controls select {
+      padding: .35rem .5rem;
+      border: 1px solid #cfd4da;
+      border-radius: .375rem;
+      font-size: .9rem;
+    }
+    .controls input[type="text"] { min-width: 260px; }
+    button {
+      padding: .35rem .8rem;
+      border: 1px solid #cfd4da;
+      background: #fff;
+      border-radius: .375rem;
+      cursor: pointer;
+      font-size: .9rem;
+    }
+    button:hover { background: #f0f2f4; }
+
+    /* ---------------------------------------------------------------
+       THEMING DEMO: override the component's --oa-* custom properties
+       from the host page. These pierce the Shadow DOM boundary.
+       The "Ocean" theme below is applied via the .theme-ocean class.
+       --------------------------------------------------------------- */
+    openatlas-vocabulary-viewer {
+      --oa-height: 640px;
+    }
+    openatlas-vocabulary-viewer.theme-ocean {
+      --oa-primary: #0d6efd;
+      --oa-active-bg: #0d6efd;
+      --oa-active-text: #ffffff;
+      --oa-hover-bg: #e7f0ff;
+      --oa-link: #0a58ca;
+      --oa-badge-bg: #e7f0ff;
+      --oa-badge-text: #0a58ca;
+    }
+    openatlas-vocabulary-viewer.theme-dark {
+      --oa-bg: #1e1f24;
+      --oa-text: #e6e6e6;
+      --oa-muted: #9aa0a6;
+      --oa-border: #34363c;
+      --oa-primary: #f0a848;
+      --oa-active-bg: #f0a848;
+      --oa-active-text: #1e1f24;
+      --oa-hover-bg: #2a2c33;
+      --oa-link: #f0c088;
+      --oa-badge-bg: #33363d;
+      --oa-badge-text: #f0c088;
+    }
+
+    .event-log {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #0f1115;
+      color: #c8e6c9;
+      border-radius: .5rem;
+      font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+      font-size: .8rem;
+      max-height: 220px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+    .event-log:empty::before {
+      content: 'Select a type in the viewer — the oa-vocabulary-selected event will be logged here.';
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-wrap">
+    <h1>OpenAtlas Vocabulary Viewer</h1>
+    <p>
+      A native Web Component (Custom Element + Shadow DOM) demo. Use the controls
+      to switch language, apply host-side theming via CSS custom properties, and
+      point the viewer at a custom (e.g. caching-proxy) endpoint.
+    </p>
+
+    <div class="controls">
+      <div>
+        <label for="lang">Language</label>
+        <select id="lang">
+          <option value="en">English</option>
+          <option value="de">Deutsch</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="theme">Theme</label>
+        <select id="theme">
+          <option value="">Default (sage)</option>
+          <option value="theme-ocean">Ocean (blue)</option>
+          <option value="theme-dark">Dark</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="endpoint">Tree endpoint</label>
+        <input id="endpoint" type="text"
+               value="https://thanados.openatlas.eu/api/1/vocabulary/tree">
+      </div>
+      <button id="apply-endpoint" type="button">Apply endpoint</button>
+    </div>
+
+    <!--
+      The component. Attributes:
+        tree-endpoint   – full URL to the vocabulary tree (host proxy friendly)
+        detail-endpoint – URL template with an {id} placeholder
+        lang            – 'en' | 'de'
+        bootstrap-url   – override the injected Bootstrap 5.3 stylesheet
+    -->
+    <openatlas-vocabulary-viewer
+      id="viewer"
+      lang="en"
+      tree-endpoint="https://thanados.openatlas.eu/api/1/vocabulary/tree"
+      detail-endpoint="https://thanados.openatlas.eu/api/1/vocabulary/{id}">
+    </openatlas-vocabulary-viewer>
+
+    <div id="log" class="event-log"></div>
+  </div>
+
+  <!-- Load the component as an ES module. -->
+  <script type="module" src="./openatlas-vocabulary-viewer.js"></script>
+
+  <script>
+    const viewer = document.getElementById('viewer');
+    const log = document.getElementById('log');
+
+    /** Append a line to the on-page event log. */
+    function logLine(msg) {
+      const time = new Date().toLocaleTimeString();
+      log.textContent += `[${time}] ${msg}\n`;
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // ---- React to the component's custom events -------------------------
+    viewer.addEventListener('oa-vocabulary-selected', (e) => {
+      const { id, data } = e.detail;
+      logLine(`oa-vocabulary-selected  id=${id}  name="${data.name}"  uuid=${data.uuid || 'n/a'}`);
+    });
+
+    viewer.addEventListener('oa-vocabulary-error', (e) => {
+      logLine(`oa-vocabulary-error  context=${e.detail.context}  message="${e.detail.error.message}"`);
+    });
+
+    viewer.addEventListener('oa-tree-loaded', () => {
+      logLine('oa-tree-loaded  (vocabulary tree fetched and rendered)');
+    });
+
+    // ---- Controls -------------------------------------------------------
+    document.getElementById('lang').addEventListener('change', (e) => {
+      // Either set the attribute or call the public method.
+      viewer.setLanguage(e.target.value);
+    });
+
+    document.getElementById('theme').addEventListener('change', (e) => {
+      viewer.classList.remove('theme-ocean', 'theme-dark');
+      if (e.target.value) viewer.classList.add(e.target.value);
+    });
+
+    document.getElementById('apply-endpoint').addEventListener('click', () => {
+      const url = document.getElementById('endpoint').value.trim();
+      if (url) viewer.setAttribute('tree-endpoint', url);
+    });
+  </script>
+</body>
+</html>
