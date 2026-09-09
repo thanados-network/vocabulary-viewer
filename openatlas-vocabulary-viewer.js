@@ -547,6 +547,15 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
 
     const parts = [];
 
+    // UUID copy button, pinned to the top-right corner of the detail panel.
+    if (item.uuid) {
+      parts.push(`
+        <button type="button" class="btn btn-sm oa-copy-btn oa-copy-corner" data-copy="${esc(item.uuid)}" title="${esc(L.uuid)}: ${esc(item.uuid)}">
+          <span class="oa-copy-icon" aria-hidden="true">\u29c9</span> ${esc(L.copy)} ${esc(L.uuid)}
+        </button>
+      `);
+    }
+
     // Breadcrumb from root ancestor ids (best-effort name lookup in the tree).
     const crumb = this.#renderBreadcrumb(item);
     if (crumb) parts.push(crumb);
@@ -562,18 +571,9 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
       </div>
     `);
 
-    // UUID with copy button.
-    if (item.uuid) {
-      parts.push(`
-        <div class="oa-uuid mt-3">
-          <label class="oa-field-label">${esc(L.uuid)}</label>
-          <div class="oa-uuid-row">
-            <code class="oa-uuid-value">${esc(item.uuid)}</code>
-            <button type="button" class="btn btn-sm oa-copy-btn" data-copy="${esc(item.uuid)}">${esc(L.copy)}</button>
-          </div>
-        </div>
-      `);
-    }
+    // Image (shown here, where the UUID field used to be).
+    const image = this.#renderImage(item.image);
+    if (image) parts.push(image);
 
     // Description.
     if (item.description) {
@@ -593,11 +593,7 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
     const biblio = this.#renderBibliography(item.references);
     if (biblio) parts.push(biblio);
 
-    // Image.
-    const image = this.#renderImage(item.image);
-    if (image) parts.push(image);
-
-    panel.innerHTML = `<div class="oa-detail p-3">${parts.join('')}</div>`;
+    panel.innerHTML = `<div class="oa-detail p-3 position-relative">${parts.join('')}</div>`;
 
     const copyBtn = panel.querySelector('.oa-copy-btn');
     if (copyBtn) {
@@ -643,7 +639,8 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
   #renderExternalReferences(refs) {
     if (!Array.isArray(refs) || !refs.length) return '';
     const badges = refs.map((ref) => {
-      const text = ref.identifier ? `${ref.name}: ${ref.identifier}` : ref.name;
+      const isUrl = /^https?:\/\//i.test(ref.identifier || '');
+      const text = (ref.identifier && !isUrl) ? `${ref.name}: ${ref.identifier}` : ref.name;
       const href = this.#externalHref(ref);
       if (href) {
         return `<a class="badge oa-ext-badge text-decoration-none" href="${esc(href)}" target="_blank" rel="noopener noreferrer" title="${esc(ref.match || '')}">${esc(text)}</a>`;
@@ -660,8 +657,13 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
 
   /** Resolve a clickable URL for an external reference. @param {ExternalReferenceSystemModel} ref @returns {string} */
   #externalHref(ref) {
-    if (ref.referenceUrl) return ref.referenceUrl;
-    if (ref.resolverUrl) return `${ref.resolverUrl}${ref.identifier || ''}`;
+    const id = ref.identifier || '';
+    // Some systems (Wikidata, Getty AAT) already provide the full record URL as
+    // the identifier — link straight to it rather than to the base site.
+    if (/^https?:\/\//i.test(id)) return id;
+    // Otherwise build the exact record URL from the resolver base + identifier.
+    if (id && ref.resolverUrl) return `${ref.resolverUrl}${id}`;
+    if (id && ref.referenceUrl) return `${ref.referenceUrl}${id}`;
     return '';
   }
 
@@ -675,7 +677,8 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
     const items = refs.map((r) => {
       const cite = r.citation || r.name;
       const pages = r.pages ? `, ${esc(r.pages)}` : '';
-      return `<li class="oa-biblio-item">${esc(cite)}${pages}</li>`;
+      // Citations may contain URLs — render those as clickable links.
+      return `<li class="oa-biblio-item">${this.#linkify(cite)}${pages}</li>`;
     }).join('');
     return `
       <div class="oa-section mt-3">
@@ -683,6 +686,27 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
         <ul class="oa-biblio list-unstyled mb-0">${items}</ul>
       </div>
     `;
+  }
+
+  /**
+   * Escape a string and turn any bare http(s) URLs it contains into links.
+   * @param {*} text
+   * @returns {string} HTML-safe string with anchors for embedded URLs.
+   */
+  #linkify(text) {
+    const raw = (text === null || text === undefined) ? '' : String(text);
+    const urlRe = /(https?:\/\/[^\s<>"')\]]+)/g;
+    let out = '';
+    let last = 0;
+    let m;
+    while ((m = urlRe.exec(raw)) !== null) {
+      out += esc(raw.slice(last, m.index));
+      const url = m[1];
+      out += `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(url)}</a>`;
+      last = m.index + url.length;
+    }
+    out += esc(raw.slice(last));
+    return out;
   }
 
   /**
@@ -974,10 +998,20 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
       }
       .oa-copy-btn { border: 1px solid var(--oa-border); color: var(--oa-text); background: var(--oa-bg); }
       .oa-copy-btn.oa-copied { background: var(--oa-active-bg); color: var(--oa-active-text); border-color: var(--oa-active-bg); }
+      .oa-copy-corner { position: absolute; top: .75rem; right: .75rem; z-index: 2; white-space: nowrap; }
+      .oa-copy-icon { font-size: .9em; }
+
+      /* Keep the header/breadcrumb clear of the corner copy button. */
+      .oa-detail .oa-breadcrumb, .oa-detail-header { padding-right: 7rem; }
 
       .oa-badges { display: flex; flex-wrap: wrap; gap: .35rem; }
       .oa-description { color: var(--oa-text); white-space: pre-wrap; }
       .oa-breadcrumb .breadcrumb-item, .oa-breadcrumb .breadcrumb-item + .breadcrumb-item::before { color: var(--oa-muted); }
+
+      .oa-biblio-item { margin-bottom: .6rem; line-height: 1.4; }
+      .oa-biblio-item:last-child { margin-bottom: 0; }
+      .oa-biblio-item a { color: var(--oa-link); word-break: break-word; }
+
       .oa-image img { max-height: 320px; }
     `;
   }
