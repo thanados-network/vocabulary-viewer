@@ -73,6 +73,17 @@
       --oa-badge-bg: #33363d;
       --oa-badge-text: #f0c088;
     }
+    openatlas-vocabulary-viewer.theme-corporate {
+      --oa-font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      --oa-font-size: 14px;
+      --oa-primary: #8e24aa;
+      --oa-active-bg: #8e24aa;
+      --oa-active-text: #ffffff;
+      --oa-hover-bg: #f3e5f5;
+      --oa-link: #7b1fa2;
+      --oa-badge-bg: #ede7f6;
+      --oa-badge-text: #6a1b9a;
+    }
 
     .event-log {
       margin-top: 1rem;
@@ -97,8 +108,9 @@
     <h1>OpenAtlas Vocabulary Viewer</h1>
     <p>
       A native Web Component (Custom Element + Shadow DOM) demo. Use the controls
-      to switch language, apply host-side theming via CSS custom properties, and
-      point the viewer at a custom (e.g. caching-proxy) endpoint.
+      to switch language, customize font family and size (for Corporate Identity / CI integration),
+      apply host-side theming via CSS custom properties, and point the viewer at a custom
+      (e.g. caching-proxy) endpoint.
     </p>
 
     <div class="controls">
@@ -116,13 +128,36 @@
           <option value="">Default (sage)</option>
           <option value="theme-ocean">Ocean (blue)</option>
           <option value="theme-dark">Dark</option>
+          <option value="theme-corporate">Corporate CI (Purple + Segoe UI 14px)</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="font-family">Font Family</label>
+        <select id="font-family">
+          <option value="">Default (Inter / System UI)</option>
+          <option value="'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Sans-Serif (Segoe UI)</option>
+          <option value="Georgia, 'Times New Roman', serif">Serif (Georgia)</option>
+          <option value="'Courier New', Consolas, monospace">Monospace (Consolas)</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="font-size">Font Size</label>
+        <select id="font-size">
+          <option value="">Default (1rem / 16px)</option>
+          <option value="13px">13px (Compact)</option>
+          <option value="14px">14px (Standard)</option>
+          <option value="16px">16px (Normal)</option>
+          <option value="18px">18px (Large)</option>
+          <option value="20px">20px (Extra Large)</option>
         </select>
       </div>
 
       <div>
         <label for="endpoint">Tree endpoint</label>
         <input id="endpoint" type="text"
-               value="https://thanados.openatlas.eu/api/1/vocabulary/tree">
+               value="http://127.0.0.1:5000/api/1/vocabulary/tree">
       </div>
       <button id="apply-endpoint" type="button">Apply endpoint</button>
     </div>
@@ -137,8 +172,8 @@
     <openatlas-vocabulary-viewer
       id="viewer"
       lang="en"
-      tree-endpoint="https://thanados.openatlas.eu/api/1/vocabulary/tree"
-      detail-endpoint="https://thanados.openatlas.eu/api/1/vocabulary/{id}">
+      tree-endpoint="http://127.0.0.1:5000/api/1/vocabulary/tree"
+      detail-endpoint="http://127.0.0.1:5000/api/1/vocabulary/{id}">
     </openatlas-vocabulary-viewer>
 
     <div id="log" class="event-log"></div>
@@ -161,7 +196,10 @@
     // ---- React to the component's custom events -------------------------
     viewer.addEventListener('oa-vocabulary-selected', (e) => {
       const { id, data } = e.detail;
-      logLine(`oa-vocabulary-selected  id=${id}  name="${data.name}"  uuid=${data.uuid || 'n/a'}`);
+      const selectable = data.selectable !== false ? 'selectable' : 'structural (not assignable)';
+      const direct = data.entityCount ?? data.count ?? 0;
+      const subs = data.entityCountSubs ?? data.countSubs ?? 0;
+      logLine(`oa-vocabulary-selected  id=${id}  name="${data.name}"  [${selectable}]  entities=${direct} (+${subs} subs)  uuid=${data.uuid || 'n/a'}`);
     });
 
     viewer.addEventListener('oa-vocabulary-error', (e) => {
@@ -179,8 +217,20 @@
     });
 
     document.getElementById('theme').addEventListener('change', (e) => {
-      viewer.classList.remove('theme-ocean', 'theme-dark');
+      viewer.classList.remove('theme-ocean', 'theme-dark', 'theme-corporate');
       if (e.target.value) viewer.classList.add(e.target.value);
+    });
+
+    document.getElementById('font-family').addEventListener('change', (e) => {
+      // Set via public method (also works via viewer.setAttribute('font-family', ...))
+      viewer.setFontFamily(e.target.value);
+      logLine(`Font family set to: ${e.target.value || 'default'}`);
+    });
+
+    document.getElementById('font-size').addEventListener('change', (e) => {
+      // Set via public method (also works via viewer.setAttribute('font-size', ...))
+      viewer.setFontSize(e.target.value);
+      logLine(`Font size set to: ${e.target.value || 'default'}`);
     });
 
     document.getElementById('apply-endpoint').addEventListener('click', () => {

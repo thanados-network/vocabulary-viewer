@@ -7,9 +7,10 @@
  *
  * Styling is provided by Bootstrap 5.3 injected into the shadow root and is
  * themable from the host page via `--oa-*` CSS custom properties (they pierce
- * the shadow boundary). The UI is bilingual (English / German) via the `lang`
- * attribute. No client-side caching is performed: point `tree-endpoint` /
- * `detail-endpoint` at a caching proxy if needed.
+ * the shadow boundary), as well as HTML attributes (`font-family`, `font-size`)
+ * and a public JavaScript API for Corporate Identity (CI) integration.
+ * The UI is bilingual (English / German) via the `lang` attribute. No client-side
+ * caching is performed: point `tree-endpoint` / `detail-endpoint` at a caching proxy if needed.
  *
  * @module openatlas-vocabulary-viewer
  * @license MIT
@@ -20,8 +21,8 @@
  */
 
 /** Default OpenAtlas endpoints (overridable via attributes). */
-const DEFAULT_TREE_ENDPOINT = 'https://thanados.openatlas.eu/api/1/vocabulary/tree';
-const DEFAULT_DETAIL_ENDPOINT = 'https://thanados.openatlas.eu/api/1/vocabulary/{id}';
+const DEFAULT_TREE_ENDPOINT = 'http://127.0.0.1:5000/api/1/vocabulary/tree';
+const DEFAULT_DETAIL_ENDPOINT = 'http://127.0.0.1:5000/api/1/vocabulary/{id}';
 const DEFAULT_BOOTSTRAP_URL = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css';
 
 /** The vocabulary categories returned by the tree endpoint, in display order. */
@@ -53,8 +54,22 @@ const LABELS = {
     retry: 'Retry',
     subtypes: 'Subtypes',
     entities: 'Entities',
+    entitiesSubs: 'Subtype entities',
+    directEntities: 'Directly linked entities',
+    subtypesEntities: 'Entities in subtypes',
+    classes: 'Entity classes',
+    selectable: 'Selectable',
+    assignable: 'Assignable',
+    notAssignable: 'Structural node (not assignable)',
+    structuralNode: 'Structural node',
+    structuralNodeHint: 'Structural grouping node — entities cannot be assigned to this type.',
+    assignableHint: 'Entities can be assigned to this type.',
+    timespan: 'Time span',
+    from: 'From',
+    to: 'To',
+    parents: 'Parents',
     categories: {
-      standard: 'Standard', place: 'Place', custom: 'Custom', value: 'Value', tools: 'Tools', system: 'System'
+      standard: 'Standard', place: 'Place', custom: 'Custom', value: 'Value', tools: 'Tools', tool: 'Tools', system: 'System'
     }
   },
   de: {
@@ -78,8 +93,22 @@ const LABELS = {
     retry: 'Erneut versuchen',
     subtypes: 'Untertypen',
     entities: 'Entitäten',
+    entitiesSubs: 'Untertyp-Entitäten',
+    directEntities: 'Direkt verknüpfte Entitäten',
+    subtypesEntities: 'Entitäten in Untertypen',
+    classes: 'Entitätsklassen',
+    selectable: 'Auswählbar',
+    assignable: 'Zuweisbar',
+    notAssignable: 'Strukturknoten (nicht zuweisbar)',
+    structuralNode: 'Strukturknoten',
+    structuralNodeHint: 'Dient als Strukturknoten — es können keine Entitäten zugewiesen werden.',
+    assignableHint: 'Diesem Typ können Entitäten zugewiesen werden.',
+    timespan: 'Zeitspanne',
+    from: 'Von',
+    to: 'Bis',
+    parents: 'Übergeordnete Typen',
     categories: {
-      standard: 'Standard', place: 'Ort', custom: 'Benutzerdefiniert', value: 'Wert', tools: 'Werkzeuge', system: 'System'
+      standard: 'Standard', place: 'Ort', custom: 'Benutzerdefiniert', value: 'Wert', tools: 'Werkzeuge', tool: 'Werkzeuge', system: 'System'
     }
   }
 };
@@ -111,7 +140,7 @@ function esc(value) {
 class OpenAtlasVocabularyViewer extends HTMLElement {
   /** Attributes that trigger {@link attributeChangedCallback}. */
   static get observedAttributes() {
-    return ['tree-endpoint', 'detail-endpoint', 'lang', 'bootstrap-url'];
+    return ['tree-endpoint', 'detail-endpoint', 'lang', 'bootstrap-url', 'font-family', 'font-size'];
   }
 
   constructor() {
@@ -147,6 +176,34 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
     return this.getAttribute('bootstrap-url') || DEFAULT_BOOTSTRAP_URL;
   }
 
+  /** @returns {string} Configured font family. */
+  get fontFamily() {
+    return this.getAttribute('font-family') || this.style.getPropertyValue('--oa-font-family') || '';
+  }
+
+  /** @param {string|null} val */
+  set fontFamily(val) {
+    if (val) {
+      this.setAttribute('font-family', val);
+    } else {
+      this.removeAttribute('font-family');
+    }
+  }
+
+  /** @returns {string} Configured font size. */
+  get fontSize() {
+    return this.getAttribute('font-size') || this.style.getPropertyValue('--oa-font-size') || '';
+  }
+
+  /** @param {string|number|null} val */
+  set fontSize(val) {
+    if (val != null && val !== '') {
+      this.setAttribute('font-size', String(val));
+    } else {
+      this.removeAttribute('font-size');
+    }
+  }
+
   /** @returns {'en'|'de'} Active UI language (defaults to `en`). */
   get lang() {
     const l = (this.getAttribute('lang') || 'en').toLowerCase();
@@ -163,6 +220,7 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
   /* ---------------------------------------------------------------------- */
 
   connectedCallback() {
+    this.#applyFont();
     this.#injectBootstrap();
     this.#applyStaticLabels();
 
@@ -189,6 +247,10 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
     if (!this.isConnected) return;
 
     switch (name) {
+      case 'font-family':
+      case 'font-size':
+        this.#applyFont();
+        break;
       case 'lang':
         this.#applyStaticLabels();
         // Re-render detail (labels inside it) and tree category headers.
@@ -217,6 +279,34 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
    */
   setLanguage(lang) {
     this.setAttribute('lang', lang === 'de' ? 'de' : 'en');
+  }
+
+  /**
+   * Set the font family at runtime.
+   * @param {string|null} fontFamily CSS font-family string (e.g. 'Roboto, sans-serif').
+   * @returns {void}
+   */
+  setFontFamily(fontFamily) {
+    this.fontFamily = fontFamily;
+  }
+
+  /**
+   * Set the font size at runtime.
+   * @param {string|number|null} fontSize CSS font-size (e.g. '14px', '1rem', or 14 for 14px).
+   * @returns {void}
+   */
+  setFontSize(fontSize) {
+    this.fontSize = fontSize != null ? String(fontSize) : null;
+  }
+
+  /**
+   * Configure both font family and font size simultaneously.
+   * @param {{ fontFamily?: string|null, fontSize?: string|number|null }} options
+   * @returns {void}
+   */
+  setFont({ fontFamily, fontSize } = {}) {
+    if (fontFamily !== undefined) this.setFontFamily(fontFamily);
+    if (fontSize !== undefined) this.setFontSize(fontSize);
   }
 
   /**
@@ -353,9 +443,12 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
     li.className = 'oa-node';
     li.dataset.id = item.id;
     li.dataset.name = (item.name || '').toLowerCase();
+    const isSelectable = item.selectable !== false;
+    li.dataset.selectable = String(isSelectable);
 
     const row = document.createElement('div');
     row.className = 'oa-node-row';
+    if (!isSelectable) row.classList.add('oa-non-selectable');
     row.style.setProperty('--oa-depth', String(depth));
 
     const hasChildren = Array.isArray(item.children) && item.children.length > 0;
@@ -365,7 +458,7 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
     toggle.className = 'oa-toggle';
     toggle.setAttribute('aria-label', 'toggle');
     if (hasChildren) {
-      toggle.textContent = expand ? '▾' : '▸';
+      toggle.textContent = expand ? '\u25BE' : '\u25B8';
       toggle.dataset.expanded = String(expand);
     } else {
       toggle.classList.add('oa-toggle-empty');
@@ -374,11 +467,52 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
     }
     row.appendChild(toggle);
 
+    if (!isSelectable) {
+      const structIcon = document.createElement('span');
+      structIcon.className = 'oa-tree-icon';
+      structIcon.setAttribute('aria-hidden', 'true');
+      structIcon.textContent = '\uD83D\uDCC1'; // 📁 folder icon for grouping nodes
+      structIcon.title = this.#labels.structuralNodeHint;
+      row.appendChild(structIcon);
+    }
+
     const label = document.createElement('button');
     label.type = 'button';
     label.className = 'oa-label';
     label.textContent = item.name || `#${item.id}`;
+    if (!isSelectable) {
+      label.title = `${item.name || `#${item.id}`} (${this.#labels.notAssignable})`;
+    } else if (Array.isArray(item.classes) && item.classes.length) {
+      label.title = `${item.name || `#${item.id}`} [${item.classes.join(', ')}]`;
+    }
     row.appendChild(label);
+
+    // Entity counts (direct and subtypes)
+    const entityCount = item.entityCount ?? item.count ?? 0;
+    const entityCountSubs = item.entityCountSubs ?? item.countSubs ?? 0;
+
+    if (entityCount > 0 || entityCountSubs > 0) {
+      const countsWrap = document.createElement('span');
+      countsWrap.className = 'oa-tree-counts';
+
+      if (entityCount > 0) {
+        const directBadge = document.createElement('span');
+        directBadge.className = 'badge rounded-pill oa-badge-count-direct';
+        directBadge.textContent = String(entityCount);
+        directBadge.title = `${this.#labels.directEntities}: ${entityCount}`;
+        countsWrap.appendChild(directBadge);
+      }
+
+      if (entityCountSubs > 0) {
+        const subsBadge = document.createElement('span');
+        subsBadge.className = 'badge rounded-pill oa-badge-count-subs';
+        subsBadge.textContent = `+${entityCountSubs}`;
+        subsBadge.title = `${this.#labels.subtypesEntities}: ${entityCountSubs}`;
+        countsWrap.appendChild(subsBadge);
+      }
+
+      row.appendChild(countsWrap);
+    }
 
     li.appendChild(row);
 
@@ -406,14 +540,14 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
         e.stopPropagation();
         const nowExpanded = toggle.dataset.expanded !== 'true';
         toggle.dataset.expanded = String(nowExpanded);
-        toggle.textContent = nowExpanded ? '▾' : '▸';
+        toggle.textContent = nowExpanded ? '\u25BE' : '\u25B8';
         if (nowExpanded) this.#buildChildren(li);
         childUl.hidden = !nowExpanded;
       });
     }
 
-    label.addEventListener('click', (e) => {
-      e.stopPropagation();
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('.oa-toggle')) return;
       this.loadDetail(item.id);
     });
 
@@ -437,14 +571,69 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
     li._built = true;
   }
 
+  /**
+   * Find the path of node IDs from root to the given target node id.
+   * @param {number} targetId
+   * @returns {number[]|null} Array of node IDs including targetId, or null if not found.
+   */
+  #findPathToNode(targetId) {
+    if (!this._treeData) return null;
+
+    const findInNodes = (nodes, path) => {
+      for (const node of nodes) {
+        const currentPath = [...path, node.id];
+        if (node.id === targetId) return currentPath;
+        if (Array.isArray(node.children) && node.children.length > 0) {
+          const res = findInNodes(node.children, currentPath);
+          if (res) return res;
+        }
+      }
+      return null;
+    };
+
+    for (const cat of CATEGORY_ORDER) {
+      const items = Array.isArray(this._treeData[cat]) ? this._treeData[cat] : [];
+      const res = findInNodes(items, []);
+      if (res) return res;
+    }
+    return null;
+  }
+
   /** Mark the node with the given id active and clear previous highlight. @param {number} id */
   #highlightActive(id) {
     this.shadowRoot.querySelectorAll('.oa-node-row.active')
       .forEach((el) => el.classList.remove('active'));
-    const li = this.shadowRoot.querySelector(`.oa-node[data-id="${CSS.escape(String(id))}"]`);
+
+    // Expand ancestors if needed so the node is rendered in the DOM
+    const path = this.#findPathToNode(id);
+    if (path && path.length > 1) {
+      for (let i = 0; i < path.length - 1; i++) {
+        const ancestorId = path[i];
+        const escAncestor = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(String(ancestorId)) : String(ancestorId);
+        const ancestorLi = this.shadowRoot.querySelector(`.oa-node[data-id="${escAncestor}"]`);
+        if (ancestorLi) {
+          this.#buildChildren(ancestorLi);
+          const toggle = ancestorLi.querySelector(':scope > .oa-node-row > .oa-toggle');
+          if (toggle) {
+            toggle.dataset.expanded = 'true';
+            toggle.textContent = '\u25BE';
+          }
+          const childUl = ancestorLi.querySelector(':scope > ul.oa-tree');
+          if (childUl) childUl.hidden = false;
+        }
+      }
+    }
+
+    const escTarget = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(String(id)) : String(id);
+    const li = this.shadowRoot.querySelector(`.oa-node[data-id="${escTarget}"]`);
     if (li) {
       const row = li.querySelector(':scope > .oa-node-row');
-      if (row) row.classList.add('active');
+      if (row) {
+        row.classList.add('active');
+        if (typeof row.scrollIntoView === 'function') {
+          row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      }
     }
   }
 
@@ -512,7 +701,7 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
 
   /**
    * Return a pruned copy of the given items, keeping only nodes that match the
-   * query by name or that have a descendant which matches. Used to build the
+   * query by name or classes or that have a descendant which matches. Used to build the
    * (small) filtered subtree that the search view renders.
    * @param {VocabularyTreeItem[]} items
    * @param {string} q Lower-cased query.
@@ -523,8 +712,9 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
     const out = [];
     for (const item of items) {
       const children = this.#pruneItems(item.children, q);
-      const selfMatch = (item.name || '').toLowerCase().includes(q);
-      if (selfMatch || children.length) {
+      const nameMatch = (item.name || '').toLowerCase().includes(q);
+      const classMatch = Array.isArray(item.classes) && item.classes.some((c) => String(c).toLowerCase().includes(q));
+      if (nameMatch || classMatch || children.length) {
         out.push({ ...item, children });
       }
     }
@@ -556,26 +746,46 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
       `);
     }
 
-    // Breadcrumb from root ancestor ids (best-effort name lookup in the tree).
+    // Breadcrumbs (parents / roots)
     const crumb = this.#renderBreadcrumb(item);
     if (crumb) parts.push(crumb);
 
-    // Header: title + category badge.
+    // Header: title + category badge + selectable badge + counts + class
     const catName = item.category ? (L.categories[item.category] || item.category) : '';
+    const isSelectable = item.selectable !== false;
+    const directCount = item.entityCount ?? item.count;
+    const subsCount = item.entityCountSubs ?? item.countSubs;
+
     parts.push(`
       <div class="oa-detail-header">
-        <h2 class="oa-detail-title h4 mb-1">${esc(item.name)}</h2>
-        ${catName ? `<span class="badge oa-badge">${esc(catName)}</span>` : ''}
-        ${item.count != null ? `<span class="badge text-bg-light ms-1">${L.entities}: ${esc(item.count)}</span>` : ''}
-        ${item.countSubs != null ? `<span class="badge text-bg-light ms-1">${L.subtypes}: ${esc(item.countSubs)}</span>` : ''}
+        <h2 class="oa-detail-title h4 mb-2">${esc(item.name)}</h2>
+        <div class="oa-badges mb-2">
+          ${catName ? `<span class="badge oa-badge">${esc(catName)}</span>` : ''}
+          ${isSelectable
+            ? `<span class="badge text-bg-success" title="${esc(L.assignableHint)}">${esc(L.assignable)}</span>`
+            : `<span class="badge text-bg-warning text-dark" title="${esc(L.structuralNodeHint)}">${esc(L.notAssignable)}</span>`
+          }
+          ${directCount != null ? `<span class="badge oa-count-badge" title="${esc(L.directEntities)}">${L.entities}: ${esc(directCount)}</span>` : ''}
+          ${subsCount != null ? `<span class="badge oa-count-badge" title="${esc(L.subtypesEntities)}">${L.entitiesSubs}: ${esc(subsCount)}</span>` : ''}
+          ${item.class && item.class !== 'type' ? `<span class="badge oa-class-badge">${esc(item.class)}</span>` : ''}
+        </div>
       </div>
     `);
 
-    // Image (shown here, where the UUID field used to be).
+    // Notice for structural grouping nodes (not assignable to entities)
+    if (!isSelectable) {
+      parts.push(`
+        <div class="alert alert-warning py-2 px-3 small my-2" role="status">
+          <strong>${esc(L.notAssignable)}:</strong> ${esc(L.structuralNodeHint)}
+        </div>
+      `);
+    }
+
+    // Image (with link to high-res fileUrl and creator/license info)
     const image = this.#renderImage(item.image);
     if (image) parts.push(image);
 
-    // Description.
+    // Description
     if (item.description) {
       parts.push(`
         <div class="oa-section mt-3">
@@ -585,11 +795,23 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
       `);
     }
 
-    // External references.
+    // Valid entity classes
+    const classes = this.#renderClasses(item.classes);
+    if (classes) parts.push(classes);
+
+    // Direct sub-types
+    const subtypes = this.#renderSubtypes(item.subTypes);
+    if (subtypes) parts.push(subtypes);
+
+    // Timespan
+    const timespan = this.#renderTimespan(item.timespan);
+    if (timespan) parts.push(timespan);
+
+    // External references
     const extRefs = this.#renderExternalReferences(item.externalReferences);
     if (extRefs) parts.push(extRefs);
 
-    // Bibliography.
+    // Bibliography
     const biblio = this.#renderBibliography(item.references);
     if (biblio) parts.push(biblio);
 
@@ -599,21 +821,46 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
     if (copyBtn) {
       copyBtn.addEventListener('click', () => this.#copyUri(copyBtn.dataset.copy, copyBtn));
     }
+
+    // Wire up navigation clicks for breadcrumb parents and direct subtypes
+    panel.querySelectorAll('[data-nav-id]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const navId = parseInt(btn.dataset.navId, 10);
+        if (!isNaN(navId)) this.loadDetail(navId);
+      });
+    });
   }
 
   /**
-   * Build a breadcrumb path from the item's `root` ancestor id list, looking up
-   * names in the currently loaded tree where possible.
+   * Build a breadcrumb path from the item's `parents` (or fallback `root`) list,
+   * looking up names in the currently loaded tree where possible.
    * @param {VocabularyFlatItem} item
    * @returns {string} HTML or empty string.
    */
   #renderBreadcrumb(item) {
-    const roots = Array.isArray(item.root) ? item.root : [];
-    if (!roots.length) return '';
-    const names = roots.map((id) => this.#findNodeName(id) || `#${id}`);
-    names.push(item.name);
-    const crumbs = names.map((n) => `<li class="breadcrumb-item">${esc(n)}</li>`).join('');
-    return `<nav aria-label="breadcrumb"><ol class="breadcrumb oa-breadcrumb small mb-2">${crumbs}</ol></nav>`;
+    let parentsList = [];
+
+    if (Array.isArray(item.parents) && item.parents.length > 0) {
+      parentsList = item.parents.map((p) => ({
+        id: p.id,
+        name: p.name || this.#findNodeName(p.id) || `#${p.id}`
+      }));
+    } else if (Array.isArray(item.root) && item.root.length > 0) {
+      parentsList = item.root.map((id) => ({
+        id,
+        name: this.#findNodeName(id) || `#${id}`
+      }));
+    }
+
+    if (!parentsList.length) return '';
+
+    const crumbs = parentsList.map((p) =>
+      `<li class="breadcrumb-item"><button type="button" class="btn btn-link p-0 oa-crumb-btn" data-nav-id="${p.id}">${esc(p.name)}</button></li>`
+    );
+    crumbs.push(`<li class="breadcrumb-item active" aria-current="page">${esc(item.name)}</li>`);
+
+    return `<nav aria-label="breadcrumb"><ol class="breadcrumb oa-breadcrumb small mb-2">${crumbs.join('')}</ol></nav>`;
   }
 
   /** Find a node's name by id in the loaded tree. @param {number} id @returns {string|null} */
@@ -632,6 +879,85 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
   }
 
   /**
+   * Render valid entity classes badges.
+   * @param {string[]|null|undefined} classes
+   * @returns {string} HTML or empty string.
+   */
+  #renderClasses(classes) {
+    if (!Array.isArray(classes) || !classes.length) return '';
+    const L = this.#labels;
+    const badges = classes.map((c) => `<span class="badge oa-class-badge">${esc(c)}</span>`).join(' ');
+    return `
+      <div class="oa-section mt-3">
+        <label class="oa-field-label">${esc(L.classes)}</label>
+        <div class="oa-badges">${badges}</div>
+      </div>
+    `;
+  }
+
+  /**
+   * Render direct sub-types as interactive navigation buttons.
+   * @param {LinkedTypeItem[]|null|undefined} subTypes
+   * @returns {string} HTML or empty string.
+   */
+  #renderSubtypes(subTypes) {
+    if (!Array.isArray(subTypes) || !subTypes.length) return '';
+    const L = this.#labels;
+    const items = subTypes.map((sub) => `
+      <button type="button" class="btn btn-sm btn-outline-secondary oa-nav-link-btn" data-nav-id="${sub.id}" title="${esc(sub.name)}">
+        ${esc(sub.name)}
+      </button>
+    `).join(' ');
+    return `
+      <div class="oa-section mt-3">
+        <label class="oa-field-label">${esc(L.subtypes)} (${subTypes.length})</label>
+        <div class="oa-badges">${items}</div>
+      </div>
+    `;
+  }
+
+  /**
+   * Render timespan information (start, end dates and comments).
+   * @param {TimeSpan|null|undefined} timespan
+   * @returns {string} HTML or empty string.
+   */
+  #renderTimespan(timespan) {
+    if (!timespan || (!timespan.start && !timespan.end)) return '';
+    const L = this.#labels;
+    const formatDate = (d) => {
+      if (!d) return '';
+      if (d.earliest && d.latest && d.earliest !== d.latest) {
+        return `${d.earliest} \u2013 ${d.latest}`;
+      }
+      return d.earliest || d.latest || '';
+    };
+
+    const parts = [];
+    const startStr = formatDate(timespan.start);
+    const endStr = formatDate(timespan.end);
+
+    if (startStr && endStr) {
+      parts.push(`${L.from}: ${startStr} \u2014 ${L.to}: ${endStr}`);
+    } else if (startStr) {
+      parts.push(`${L.from}: ${startStr}`);
+    } else if (endStr) {
+      parts.push(`${L.to}: ${endStr}`);
+    }
+
+    const comments = [timespan.start?.comment, timespan.end?.comment].filter(Boolean);
+    const commentStr = comments.length ? `<small class="text-body-secondary d-block mt-1">${esc(comments.join('; '))}</small>` : '';
+
+    if (!parts.length && !commentStr) return '';
+
+    return `
+      <div class="oa-section mt-3">
+        <label class="oa-field-label">${esc(L.timespan)}</label>
+        <div class="oa-timespan">${esc(parts.join(', '))}${commentStr}</div>
+      </div>
+    `;
+  }
+
+  /**
    * Render external references as linked badges.
    * @param {ExternalReferenceSystemModel[]|null|undefined} refs
    * @returns {string} HTML or empty string.
@@ -642,10 +968,18 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
       const isUrl = /^https?:\/\//i.test(ref.identifier || '');
       const text = (ref.identifier && !isUrl) ? `${ref.name}: ${ref.identifier}` : ref.name;
       const href = this.#externalHref(ref);
+      const match = ref.match_type || ref.match || '';
+      const desc = ref.description || '';
+      const titleParts = [];
+      if (match) titleParts.push(`[${match}]`);
+      if (desc) titleParts.push(desc);
+      if (ref.identifier) titleParts.push(`ID: ${ref.identifier}`);
+      const title = titleParts.join(' ');
+
       if (href) {
-        return `<a class="badge oa-ext-badge text-decoration-none" href="${esc(href)}" target="_blank" rel="noopener noreferrer" title="${esc(ref.match || '')}">${esc(text)}</a>`;
+        return `<a class="badge oa-ext-badge text-decoration-none" href="${esc(href)}" target="_blank" rel="noopener noreferrer" title="${esc(title)}">${esc(text)} \u2197</a>`;
       }
-      return `<span class="badge oa-ext-badge" title="${esc(ref.match || '')}">${esc(text)}</span>`;
+      return `<span class="badge oa-ext-badge" title="${esc(title)}">${esc(text)}</span>`;
     }).join(' ');
     return `
       <div class="oa-section mt-3">
@@ -657,13 +991,35 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
 
   /** Resolve a clickable URL for an external reference. @param {ExternalReferenceSystemModel} ref @returns {string} */
   #externalHref(ref) {
-    const id = ref.identifier || '';
-    // Some systems (Wikidata, Getty AAT) already provide the full record URL as
-    // the identifier — link straight to it rather than to the base site.
+    if (!ref) return '';
+    const id = (ref.identifier || '').trim();
+    const url = (ref.url || '').trim();
+    const resolver = (ref.resolverUrl || '').trim();
+    const refUrl = (ref.referenceUrl || '').trim();
+
+    // 1. If identifier itself is an absolute URL (e.g. Wikidata URI, Getty AAT URI, ChronOntology URI),
+    // it points directly to the external entity record.
     if (/^https?:\/\//i.test(id)) return id;
-    // Otherwise build the exact record URL from the resolver base + identifier.
-    if (id && ref.resolverUrl) return `${ref.resolverUrl}${id}`;
-    if (id && ref.referenceUrl) return `${ref.referenceUrl}${id}`;
+
+    // 2. If id is present and url is a base resolver prefix (e.g. url: "https://vocab.getty.edu/aat/", id: "300027621")
+    if (id && /^https?:\/\//i.test(url)) {
+      if (url.includes(id)) return url;
+      return url.endsWith('/') || url.endsWith('=') ? `${url}${id}` : `${url}/${id}`;
+    }
+
+    // 3. Legacy resolverUrl / referenceUrl with id
+    if (id && /^https?:\/\//i.test(resolver)) {
+      return resolver.endsWith('/') || resolver.endsWith('=') ? `${resolver}${id}` : `${resolver}/${id}`;
+    }
+    if (id && /^https?:\/\//i.test(refUrl)) {
+      return refUrl.endsWith('/') || refUrl.endsWith('=') ? `${refUrl}${id}` : `${refUrl}/${id}`;
+    }
+
+    // 4. If url is an exact entity link (absolute URL not ending in a directory slash)
+    if (/^https?:\/\//i.test(url) && !url.endsWith('/')) {
+      return url;
+    }
+
     return '';
   }
 
@@ -677,8 +1033,8 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
     const items = refs.map((r) => {
       const cite = r.citation || r.name;
       const pages = r.pages ? `, ${esc(r.pages)}` : '';
-      // Citations may contain URLs — render those as clickable links.
-      return `<li class="oa-biblio-item">${this.#linkify(cite)}${pages}</li>`;
+      const typeBadge = r.type ? ` <span class="badge oa-count-badge">${esc(r.type)}</span>` : '';
+      return `<li class="oa-biblio-item">${this.#linkify(cite)}${pages}${typeBadge}</li>`;
     }).join('');
     return `
       <div class="oa-section mt-3">
@@ -716,13 +1072,34 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
    */
   #renderImage(image) {
     if (!image) return '';
-    const src = image.thumbnailUrl || image.fileUrl;
-    if (!src) return '';
+    // Prefer fileUrl (the direct binary display endpoint /files/{id}/display) because
+    // thumbnailUrl may 404 when imageProcessing is disabled on the OpenAtlas server.
+    const primarySrc = image.fileUrl || image.thumbnailUrl;
+    const fallbackSrc = image.thumbnailUrl || image.fileUrl;
+    if (!primarySrc) return '';
+
+    const L = this.#labels;
+    const creators = Array.isArray(image.creators) ? image.creators.map((c) => c.name).filter(Boolean).join(', ') : '';
+    const licenseName = image.license?.name || '';
+    const metaParts = [];
+    if (creators) metaParts.push(creators);
+    if (licenseName) metaParts.push(licenseName);
+
+    const fullUrl = image.fileUrl || primarySrc;
+
     return `
       <div class="oa-section mt-3">
-        <label class="oa-field-label">${esc(this.#labels.image)}</label>
+        <label class="oa-field-label">${esc(L.image)}</label>
         <div class="oa-image">
-          <img src="${esc(src)}" alt="${esc(this.#labels.image)}" class="img-fluid rounded" loading="lazy">
+          <a href="${esc(fullUrl)}" target="_blank" rel="noopener noreferrer" title="${esc(image.name || L.image)}">
+            <img src="${esc(primarySrc)}"
+                 data-fallback="${esc(fallbackSrc)}"
+                 alt="${esc(image.name || L.image)}"
+                 class="img-fluid rounded"
+                 loading="lazy"
+                 onerror="if (this.dataset.fallback && this.src !== this.dataset.fallback) { this.src = this.dataset.fallback; } else { this.style.display='none'; }">
+          </a>
+          ${metaParts.length ? `<div class="oa-image-meta small mt-1">${esc(metaParts.join(' \u2022 '))}</div>` : ''}
         </div>
       </div>
     `;
@@ -830,6 +1207,38 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
   }
 
   /**
+   * Synchronize the `font-family` and `font-size` attributes to CSS custom
+   * properties on the host element so they pierce into the Shadow DOM.
+   */
+  #applyFont() {
+    if (this.hasAttribute('font-family')) {
+      const ff = this.getAttribute('font-family');
+      if (ff && ff.trim()) {
+        this.style.setProperty('--oa-font-family', ff.trim());
+      } else {
+        this.style.removeProperty('--oa-font-family');
+      }
+    } else {
+      this.style.removeProperty('--oa-font-family');
+    }
+
+    if (this.hasAttribute('font-size')) {
+      let fs = this.getAttribute('font-size');
+      if (fs && fs.trim()) {
+        fs = fs.trim();
+        if (/^\d+(\.\d+)?$/.test(fs)) {
+          fs = `${fs}px`;
+        }
+        this.style.setProperty('--oa-font-size', fs);
+      } else {
+        this.style.removeProperty('--oa-font-size');
+      }
+    } else {
+      this.style.removeProperty('--oa-font-size');
+    }
+  }
+
+  /**
    * Inject the Bootstrap stylesheet plus component theme styles into the shadow
    * root, reusing a shared constructable stylesheet across instances.
    */
@@ -913,7 +1322,10 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
         --oa-link: #2c6e2c;
         --oa-badge-bg: #e7f1e7;
         --oa-badge-text: #2c6e2c;
+        --oa-class-badge-bg: var(--oa-hover-bg);
+        --oa-class-badge-text: var(--oa-text);
         --oa-font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        --oa-font-size: 1rem;
         --oa-height: 600px;
 
         /* Map onto Bootstrap where useful. */
@@ -922,20 +1334,46 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
         --bs-body-color: var(--oa-text);
         --bs-body-bg: var(--oa-bg);
         --bs-border-color: var(--oa-border);
+        --bs-body-font-family: var(--oa-font-family);
+        --bs-body-font-size: var(--oa-font-size);
+        --bs-secondary-rgb: 108, 117, 125;
+        --bs-secondary-color: var(--oa-muted);
+        --bs-secondary-bg: var(--oa-hover-bg);
+        --bs-light-rgb: 248, 249, 250;
+        --bs-dark-rgb: 33, 37, 41;
+        --bs-success-rgb: 25, 135, 84;
+        --bs-warning-rgb: 255, 193, 7;
+        --bs-danger-rgb: 220, 53, 69;
 
         display: block;
         color: var(--oa-text);
         background: var(--oa-bg);
         font-family: var(--oa-font-family);
+        font-size: var(--oa-font-size);
+        line-height: 1.5;
         border: 1px solid var(--oa-border);
         border-radius: .5rem;
         overflow: hidden;
       }
 
-      .oa-root { display: flex; flex-direction: column; height: var(--oa-height); }
+      .oa-root {
+        display: flex;
+        flex-direction: column;
+        height: var(--oa-height);
+        font-family: var(--oa-font-family);
+        font-size: var(--oa-font-size);
+      }
+
+      .oa-root input,
+      .oa-root button,
+      .oa-root select,
+      .oa-root textarea {
+        font-family: inherit;
+      }
 
       .oa-header { padding: .75rem 1rem; border-bottom: 1px solid var(--oa-border); background: var(--oa-bg); }
-      .oa-header-title { color: var(--oa-text); margin: 0; }
+      .oa-header-title { color: var(--oa-text); margin: 0; font-size: 1.15em; font-weight: 600; line-height: 1.3; }
+      .oa-search { font-size: .875em; color: var(--oa-text); background-color: var(--oa-bg); border-color: var(--oa-border); }
 
       .oa-body { display: flex; flex: 1 1 auto; min-height: 0; }
 
@@ -950,7 +1388,7 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
 
       .oa-category + .oa-category { margin-top: .75rem; }
       .oa-category-title {
-        font-size: .7rem; text-transform: uppercase; letter-spacing: .06em;
+        font-size: .72em; text-transform: uppercase; letter-spacing: .06em;
         color: var(--oa-muted); font-weight: 700; padding: .25rem .5rem;
       }
 
@@ -965,38 +1403,112 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
       .oa-node-row:hover { background: var(--oa-hover-bg); }
       .oa-node-row.active { background: var(--oa-active-bg); }
       .oa-node-row.active .oa-label { color: var(--oa-active-text); font-weight: 600; }
+      .oa-node-row.oa-non-selectable .oa-label {
+        font-style: italic;
+        opacity: .85;
+      }
+
+      .oa-tree-icon {
+        font-size: .85em;
+        line-height: 1;
+        flex: 0 0 auto;
+        opacity: .75;
+      }
+
+      .oa-tree-counts {
+        display: inline-flex;
+        gap: .25rem;
+        align-items: center;
+        flex: 0 0 auto;
+        margin-left: auto;
+        padding-right: .25rem;
+      }
+
+      .oa-badge-count-direct {
+        background: var(--oa-badge-bg);
+        color: var(--oa-badge-text);
+        font-size: .7em;
+        font-weight: 600;
+        padding: .15em .45em;
+        border: 1px solid var(--oa-border);
+      }
+
+      .oa-badge-count-subs {
+        background: var(--oa-hover-bg);
+        color: var(--oa-muted);
+        font-size: .7em;
+        font-weight: 500;
+        padding: .15em .45em;
+        border: 1px dashed var(--oa-border);
+      }
+
+      .oa-node-row.active .oa-badge-count-direct,
+      .oa-node-row.active .oa-badge-count-subs {
+        background: rgba(255, 255, 255, 0.25);
+        color: var(--oa-active-text);
+        border-color: rgba(255, 255, 255, 0.4);
+      }
 
       .oa-toggle {
         border: 0; background: transparent; color: var(--oa-muted);
-        width: 1.25rem; height: 1.25rem; line-height: 1; padding: 0;
-        cursor: pointer; flex: 0 0 auto; font-size: .75rem;
+        width: 1.25em; height: 1.25em; line-height: 1; padding: 0;
+        cursor: pointer; flex: 0 0 auto; font-size: .8em;
       }
       .oa-toggle-empty { visibility: hidden; }
 
       .oa-label {
         border: 0; background: transparent; color: var(--oa-text);
         text-align: left; padding: .1rem .25rem; cursor: pointer;
-        flex: 1 1 auto; font-size: .9rem;
+        flex: 1 1 auto; font-size: .9em;
       }
       .oa-label:hover { color: var(--oa-link); }
 
       .oa-field-label {
-        display: block; font-size: .7rem; text-transform: uppercase;
+        display: block; font-size: .72em; text-transform: uppercase;
         letter-spacing: .05em; color: var(--oa-muted); font-weight: 700;
         margin-bottom: .25rem;
       }
 
-      .oa-detail-title { color: var(--oa-text); }
-      .oa-badge { background: var(--oa-badge-bg); color: var(--oa-badge-text); }
-      .oa-ext-badge { background: var(--oa-badge-bg); color: var(--oa-badge-text); }
+      .oa-detail-title { color: var(--oa-text); font-size: 1.35em; font-weight: 600; line-height: 1.3; }
+      .badge {
+        display: inline-block;
+        padding: .35em .65em;
+        font-size: .75em;
+        font-weight: 600;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+        border-radius: .375rem;
+      }
+      .text-bg-success {
+        color: #ffffff !important;
+        background-color: #198754 !important;
+      }
+      .text-bg-warning {
+        color: #000000 !important;
+        background-color: #ffc107 !important;
+      }
+      .text-bg-secondary {
+        color: var(--oa-text) !important;
+        background-color: var(--oa-hover-bg) !important;
+        border: 1px solid var(--oa-border);
+      }
+      .text-bg-light {
+        color: var(--oa-text) !important;
+        background-color: var(--oa-hover-bg) !important;
+        border: 1px solid var(--oa-border);
+      }
+      .oa-badge { background: var(--oa-badge-bg); color: var(--oa-badge-text); font-size: .75em; }
+      .oa-ext-badge { background: var(--oa-badge-bg); color: var(--oa-badge-text); font-size: .75em; }
       a.oa-ext-badge:hover { filter: brightness(.95); }
 
       .oa-uuid-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
       .oa-uuid-value {
         background: var(--oa-hover-bg); padding: .2rem .4rem; border-radius: .25rem;
-        font-size: .85rem; word-break: break-all;
+        font-size: .85em; word-break: break-all;
       }
-      .oa-copy-btn { border: 1px solid var(--oa-border); color: var(--oa-text); background: var(--oa-bg); }
+      .oa-copy-btn { border: 1px solid var(--oa-border); color: var(--oa-text); background: var(--oa-bg); font-size: .85em; }
       .oa-copy-btn.oa-copied { background: var(--oa-active-bg); color: var(--oa-active-text); border-color: var(--oa-active-bg); }
       .oa-copy-corner { position: absolute; top: .75rem; right: .75rem; z-index: 2; white-space: nowrap; }
       .oa-copy-icon { font-size: .9em; }
@@ -1005,14 +1517,86 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
       .oa-detail .oa-breadcrumb, .oa-detail-header { padding-right: 7rem; }
 
       .oa-badges { display: flex; flex-wrap: wrap; gap: .35rem; }
-      .oa-description { color: var(--oa-text); white-space: pre-wrap; }
+      .oa-description { color: var(--oa-text); white-space: pre-wrap; font-size: .95em; }
+      .oa-breadcrumb { font-size: .85em; }
       .oa-breadcrumb .breadcrumb-item, .oa-breadcrumb .breadcrumb-item + .breadcrumb-item::before { color: var(--oa-muted); }
 
-      .oa-biblio-item { margin-bottom: .6rem; line-height: 1.4; }
+      .oa-biblio-item { margin-bottom: .6rem; line-height: 1.4; font-size: .9em; }
       .oa-biblio-item:last-child { margin-bottom: 0; }
       .oa-biblio-item a { color: var(--oa-link); word-break: break-word; }
 
-      .oa-image img { max-height: 320px; }
+      .oa-nav-link-btn {
+        font-size: .8em;
+        padding: .15rem .5rem;
+        border-radius: .25rem;
+        border: 1px solid var(--oa-border);
+        background: var(--oa-bg);
+        color: var(--oa-text);
+        cursor: pointer;
+        transition: background-color .15s, border-color .15s, color .15s;
+      }
+      .oa-nav-link-btn:hover {
+        background: var(--oa-hover-bg);
+        color: var(--oa-link);
+        border-color: var(--oa-link);
+      }
+      .oa-crumb-btn {
+        color: var(--oa-link);
+        font-size: inherit;
+        text-decoration: none;
+        vertical-align: baseline;
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+      }
+      .oa-crumb-btn:hover {
+        text-decoration: underline;
+      }
+      .oa-class-badge {
+        display: inline-block;
+        font-size: .75em;
+        font-weight: 500;
+        padding: .25em .6em;
+        border-radius: .25rem;
+        background: var(--oa-class-badge-bg, var(--oa-hover-bg));
+        color: var(--oa-class-badge-text, var(--oa-text));
+        border: 1px solid var(--oa-border);
+        line-height: 1.2;
+      }
+      .oa-count-badge {
+        display: inline-block;
+        font-size: .75em;
+        font-weight: 500;
+        padding: .25em .6em;
+        border-radius: .25rem;
+        background: var(--oa-hover-bg);
+        color: var(--oa-muted);
+        border: 1px solid var(--oa-border);
+        line-height: 1.2;
+      }
+      .oa-timespan {
+        font-size: .9em;
+        color: var(--oa-text);
+      }
+
+      .oa-image img {
+        max-width: 100%;
+        max-height: 320px;
+        height: auto;
+        display: block;
+        border-radius: .375rem;
+        object-fit: contain;
+        border: 1px solid var(--oa-border);
+        background: var(--oa-hover-bg);
+      }
+      .oa-image-meta {
+        color: var(--oa-muted);
+        font-size: .8em;
+      }
+
+      .oa-empty-detail .oa-empty-title { font-size: 1.1em; font-weight: 600; }
+      .oa-empty-detail .oa-empty-hint { font-size: .875em; }
+      .oa-loading { font-size: .9em; }
     `;
   }
 }
