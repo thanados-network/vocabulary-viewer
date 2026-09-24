@@ -154,27 +154,523 @@ function esc(value) {
 }
 
 /**
+ * Parse an input of IDs (array, Set, comma-separated string, JSON array string, or single ID)
+ * into a Set of numeric IDs.
+ *
+ * @param {Array<number|string>|Set<number|string>|string|number|null|undefined} input
+ * @returns {Set<number>}
+ */
+function parseIds(input) {
+  const result = new Set();
+  if (input === null || input === undefined || input === '') return result;
+
+  if (input instanceof Set) {
+    for (const item of input) {
+      const num = Number(item);
+      if (!isNaN(num)) result.add(num);
+      else if (item !== '' && item !== null && item !== undefined) result.add(item);
+    }
+    return result;
+  }
+
+  if (Array.isArray(input)) {
+    for (const item of input.flat(Infinity)) {
+      if (typeof item === 'string') {
+        const parsed = parseIds(item);
+        for (const p of parsed) result.add(p);
+      } else {
+        const num = Number(item);
+        if (!isNaN(num)) result.add(num);
+        else if (item !== '' && item !== null && item !== undefined) result.add(item);
+      }
+    }
+    return result;
+  }
+
+  if (typeof input === 'number') {
+    if (!isNaN(input)) result.add(input);
+    return result;
+  }
+
+  if (typeof input === 'string') {
+    const trimmed = input.trim();
+    if (!trimmed) return result;
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsedJson = JSON.parse(trimmed);
+        if (Array.isArray(parsedJson)) {
+          return parseIds(parsedJson);
+        }
+      } catch (_e) {
+        // Fall back to delimiter splitting
+      }
+    }
+    const tokens = trimmed.split(/[\s,;]+/);
+    for (const tok of tokens) {
+      if (!tok) continue;
+      const num = Number(tok);
+      if (!isNaN(num)) result.add(num);
+      else result.add(tok);
+    }
+    return result;
+  }
+
+  return result;
+}
+
+const parseIgnoredIds = parseIds;
+const parseIncludedIds = parseIds;
+
+/**
+ * Normalize and validate filter options containing include / exclude IDs.
+ * Throws an Error if both include and exclude filters are non-empty (mutually exclusive).
+ *
+ * @param {*} optionsOrExclude
+ * @param {*} [includeIdsArg]
+ * @returns {{ mode: 'none'|'exclude'|'include', excludeSet: Set<number>, includeSet: Set<number> }}
+ */
+function normalizeFilterOptions(optionsOrExclude, includeIdsArg) {
+  let excludeInput = null;
+  let includeInput = null;
+
+  if (optionsOrExclude && typeof optionsOrExclude === 'object' && !(optionsOrExclude instanceof Set) && !Array.isArray(optionsOrExclude)) {
+    excludeInput = optionsOrExclude.excludeIds ?? optionsOrExclude.ignoredIds ?? optionsOrExclude.exclude ?? optionsOrExclude.ignored;
+    includeInput = optionsOrExclude.includeIds ?? optionsOrExclude.includedIds ?? optionsOrExclude.include ?? optionsOrExclude.included;
+  } else {
+    excludeInput = optionsOrExclude;
+    includeInput = includeIdsArg;
+  }
+
+  const excludeSet = parseIds(excludeInput);
+  const includeSet = parseIds(includeInput);
+
+  if (excludeSet.size > 0 && includeSet.size > 0) {
+    throw new Error('openatlas-vocabulary-viewer: "include-ids" and "exclude-ids" ("ignored-ids") are mutually exclusive. Only one can be specified.');
+  }
+
+  if (includeSet.size > 0) {
+    return { mode: 'include', excludeSet, includeSet };
+  }
+  if (excludeSet.size > 0) {
+    return { mode: 'exclude', excludeSet, includeSet };
+  }
+  return { mode: 'none', excludeSet, includeSet };
+}
+
+/**
+ * Filter a single VocabularyTreeItem and its recursive children according to exclusion or inclusion rules.
+ * When in exclude mode: returns null if the item itself matches any excluded ID.
+ * When in include mode: returns the item if it matches included IDs (with all descendants),
+ * or returns the item with filtered children if any descendant matches, or null otherwise.
+ *
+ * @param {VocabularyTreeItem} item
+ * @param {*} optionsOrExclude
+ * @param {*} [includeIdsArg]
+ * @returns {VocabularyTreeItem|null} Filtered copy of item, or null if filtered out.
+ */
+function filterVocabularyItem(item, optionsOrExclude, includeIdsArg) {
+  if (!item || typeof item !== 'object') return null;
+  const { mode, excludeSet, includeSet } = normalizeFilterOptions(optionsOrExclude, includeIdsArg);
+
+  if (mode === 'none') {
+    return item;
+  }
+
+  if (mode === 'exclude') {
+    const itemId = item.id;
+    if (excludeSet.has(itemId) || excludeSet.has(Number(itemId)) || excludeSet.has(String(itemId))) {
+      return null;
+    }
+
+    let children = [];
+    if (Array.isArray(item.children) && item.children.length > 0) {
+      children = item.children
+        .map((child) => filterVocabularyItem(child, { excludeIds: excludeSet }))
+        .filter((child) => child !== null);
+    }
+
+    return {
+      ...item,
+      children
+    };
+  }
+
+  if (mode === 'include') {
+    const itemId = item.id;
+    const isDirectlyIncluded = includeSet.has(itemId) || includeSet.has(Number(itemId)) || includeSet.has(String(itemId));
+    if (isDirectlyIncluded) {
+      // The item is explicitly included: its entire subtree is included.
+      return { ...item };
+    }
+
+    // Otherwise, check if any descendant is included.
+    let keptChildren = [];
+    if (Array.isArray(item.children) && item.children.length > 0) {
+      keptChildren = item.children
+        .map((child) => filterVocabularyItem(child, { includeIds: includeSet }))
+        .filter((child) => child !== null);
+    }
+
+    if (keptChildren.length > 0) {
+      return {
+        ...item,
+        children: keptChildren
+      };
+    }
+
+    return null;
+  }
+
+  return item;
+}
+
+/**
+ * Deep-filter a VocabularyTreeResponse object so that:
+ * - In exclude mode: any node matching excludeIds (along with its entire descendant subtree) is omitted.
+ * - In include mode: only nodes matching includeIds (with their subtrees) and their ancestor path nodes are retained.
+ * Throws an error if both include and exclude IDs are supplied (mutually exclusive).
+ *
+ * @param {VocabularyTreeResponse} treeData
+ * @param {*} optionsOrExclude
+ * @param {*} [includeIdsArg]
+ * @returns {VocabularyTreeResponse} Filtered copy of the vocabulary tree.
+ */
+function filterVocabularyTree(treeData, optionsOrExclude, includeIdsArg) {
+  if (!treeData || typeof treeData !== 'object') return treeData;
+  const { mode, excludeSet, includeSet } = normalizeFilterOptions(optionsOrExclude, includeIdsArg);
+  if (mode === 'none') return treeData;
+
+  const activeSet = mode === 'include' ? includeSet : excludeSet;
+  const activeKey = mode === 'include' ? 'includeIds' : 'excludeIds';
+
+  const filtered = {};
+  for (const [cat, items] of Object.entries(treeData)) {
+    if (Array.isArray(items)) {
+      filtered[cat] = items
+        .map((item) => filterVocabularyItem(item, { [activeKey]: activeSet }))
+        .filter((item) => item !== null);
+    } else {
+      filtered[cat] = items;
+    }
+  }
+  return filtered;
+}
+
+/**
+ * Filter a VocabularyFlatItem detail payload to reflect active exclusion or inclusion rules.
+ *
+ * @param {VocabularyFlatItem} detailData
+ * @param {*} optionsOrExclude
+ * @param {*} [includeIdsArg]
+ * @returns {VocabularyFlatItem} Filtered copy of the detail data.
+ */
+function filterVocabularyDetail(detailData, optionsOrExclude, includeIdsArg) {
+  if (!detailData || typeof detailData !== 'object') return detailData;
+  const { mode, excludeSet, includeSet } = normalizeFilterOptions(optionsOrExclude, includeIdsArg);
+  if (mode === 'none') return detailData;
+
+  const result = { ...detailData };
+
+  if (mode === 'exclude') {
+    if (Array.isArray(result.subTypes)) {
+      result.subTypes = result.subTypes.filter((sub) => {
+        const id = typeof sub === 'object' && sub !== null ? sub.id : sub;
+        return !excludeSet.has(id) && !excludeSet.has(Number(id)) && !excludeSet.has(String(id));
+      });
+    }
+    if (Array.isArray(result.children)) {
+      result.children = result.children
+        .map((child) => filterVocabularyItem(child, { excludeIds: excludeSet }))
+        .filter((child) => child !== null);
+    }
+    return result;
+  }
+
+  if (mode === 'include') {
+    const detailId = result.id;
+    const isDirectlyIncluded = includeSet.has(detailId) || includeSet.has(Number(detailId)) || includeSet.has(String(detailId));
+
+    if (Array.isArray(result.subTypes)) {
+      result.subTypes = result.subTypes.filter((sub) => {
+        const id = typeof sub === 'object' && sub !== null ? sub.id : sub;
+        if (isDirectlyIncluded) return true;
+        return includeSet.has(id) || includeSet.has(Number(id)) || includeSet.has(String(id));
+      });
+    }
+    if (Array.isArray(result.children)) {
+      result.children = result.children
+        .map((child) => {
+          if (isDirectlyIncluded) return child;
+          return filterVocabularyItem(child, { includeIds: includeSet });
+        })
+        .filter((child) => child !== null);
+    }
+    return result;
+  }
+
+  return result;
+}
+
+/**
+ * Create a reusable Vocabulary Filter Adapter.
+ * Supports both exclusion and inclusion filtering modes (mutually exclusive).
+ * Throws an Error if both include and exclude filters are non-empty.
+ *
+ * @param {*} [initialOptions=[]] Array/Set of ignored IDs or options object `{ includeIds, excludeIds, ignoredIds, includedIds }`
+ * @param {*} [initialIncludeIds] Optional inclusion IDs when first param is exclusion IDs
+ * @returns {Object} Adapter instance.
+ */
+function createVocabularyFilterAdapter(initialOptions = [], initialIncludeIds) {
+  let { excludeSet, includeSet } = normalizeFilterOptions(initialOptions, initialIncludeIds);
+
+  return {
+    get mode() {
+      if (includeSet.size > 0) return 'include';
+      if (excludeSet.size > 0) return 'exclude';
+      return 'none';
+    },
+    get ignoredIds() {
+      return Array.from(excludeSet);
+    },
+    set ignoredIds(ids) {
+      this.setIgnoredIds(ids);
+    },
+    get excludeIds() {
+      return Array.from(excludeSet);
+    },
+    set excludeIds(ids) {
+      this.setIgnoredIds(ids);
+    },
+    get includedIds() {
+      return Array.from(includeSet);
+    },
+    set includedIds(ids) {
+      this.setIncludedIds(ids);
+    },
+    get includeIds() {
+      return Array.from(includeSet);
+    },
+    set includeIds(ids) {
+      this.setIncludedIds(ids);
+    },
+    getIgnoredIds() {
+      return Array.from(excludeSet);
+    },
+    getExcludeIds() {
+      return Array.from(excludeSet);
+    },
+    getIncludedIds() {
+      return Array.from(includeSet);
+    },
+    getIncludeIds() {
+      return Array.from(includeSet);
+    },
+    setIgnoredIds(ids) {
+      const parsed = parseIds(ids);
+      if (parsed.size > 0 && includeSet.size > 0) {
+        throw new Error('VocabularyFilterAdapter: "includeIds" and "excludeIds"/"ignoredIds" are mutually exclusive. Only one can be specified.');
+      }
+      excludeSet = parsed;
+      return this;
+    },
+    setExcludeIds(ids) {
+      return this.setIgnoredIds(ids);
+    },
+    setIncludedIds(ids) {
+      const parsed = parseIds(ids);
+      if (parsed.size > 0 && excludeSet.size > 0) {
+        throw new Error('VocabularyFilterAdapter: "includeIds" and "excludeIds"/"ignoredIds" are mutually exclusive. Only one can be specified.');
+      }
+      includeSet = parsed;
+      return this;
+    },
+    setIncludeIds(ids) {
+      return this.setIncludedIds(ids);
+    },
+    addIgnoredIds(...ids) {
+      if (includeSet.size > 0) {
+        throw new Error('VocabularyFilterAdapter: "includeIds" and "excludeIds"/"ignoredIds" are mutually exclusive. Only one can be specified.');
+      }
+      for (const id of ids.flat(Infinity)) {
+        const parsed = parseIds(id);
+        for (const item of parsed) excludeSet.add(item);
+      }
+      return this;
+    },
+    addExcludeIds(...ids) {
+      return this.addIgnoredIds(...ids);
+    },
+    addIncludedIds(...ids) {
+      if (excludeSet.size > 0) {
+        throw new Error('VocabularyFilterAdapter: "includeIds" and "excludeIds"/"ignoredIds" are mutually exclusive. Only one can be specified.');
+      }
+      for (const id of ids.flat(Infinity)) {
+        const parsed = parseIds(id);
+        for (const item of parsed) includeSet.add(item);
+      }
+      return this;
+    },
+    addIncludeIds(...ids) {
+      return this.addIncludedIds(...ids);
+    },
+    removeIgnoredIds(...ids) {
+      for (const id of ids.flat(Infinity)) {
+        const parsed = parseIds(id);
+        for (const item of parsed) excludeSet.delete(item);
+      }
+      return this;
+    },
+    removeExcludeIds(...ids) {
+      return this.removeIgnoredIds(...ids);
+    },
+    removeIncludedIds(...ids) {
+      for (const id of ids.flat(Infinity)) {
+        const parsed = parseIds(id);
+        for (const item of parsed) includeSet.delete(item);
+      }
+      return this;
+    },
+    removeIncludeIds(...ids) {
+      return this.removeIncludedIds(...ids);
+    },
+    clearIgnoredIds() {
+      excludeSet.clear();
+      return this;
+    },
+    clearExcludeIds() {
+      return this.clearIgnoredIds();
+    },
+    clearIncludedIds() {
+      includeSet.clear();
+      return this;
+    },
+    clearIncludeIds() {
+      return this.clearIncludedIds();
+    },
+    clear() {
+      excludeSet.clear();
+      includeSet.clear();
+      return this;
+    },
+    isIgnored(id) {
+      return excludeSet.has(Number(id)) || excludeSet.has(id) || excludeSet.has(String(id));
+    },
+    isExcluded(id) {
+      return this.isIgnored(id);
+    },
+    isIncluded(id) {
+      return includeSet.has(Number(id)) || includeSet.has(id) || includeSet.has(String(id));
+    },
+    isVisible(id) {
+      if (includeSet.size > 0 && excludeSet.size > 0) {
+        throw new Error('VocabularyFilterAdapter: "includeIds" and "excludeIds"/"ignoredIds" are mutually exclusive.');
+      }
+      if (excludeSet.size > 0) return !this.isIgnored(id);
+      if (includeSet.size > 0) return this.isIncluded(id);
+      return true;
+    },
+    filterTree(treeData) {
+      if (includeSet.size > 0 && excludeSet.size > 0) {
+        throw new Error('VocabularyFilterAdapter: "includeIds" and "excludeIds"/"ignoredIds" are mutually exclusive. Only one can be specified.');
+      }
+      if (includeSet.size > 0) {
+        return filterVocabularyTree(treeData, { includeIds: includeSet });
+      }
+      if (excludeSet.size > 0) {
+        return filterVocabularyTree(treeData, { excludeIds: excludeSet });
+      }
+      return treeData;
+    },
+    filterItem(item) {
+      if (includeSet.size > 0 && excludeSet.size > 0) {
+        throw new Error('VocabularyFilterAdapter: "includeIds" and "excludeIds"/"ignoredIds" are mutually exclusive. Only one can be specified.');
+      }
+      if (includeSet.size > 0) {
+        return filterVocabularyItem(item, { includeIds: includeSet });
+      }
+      if (excludeSet.size > 0) {
+        return filterVocabularyItem(item, { excludeIds: excludeSet });
+      }
+      return item;
+    },
+    filterDetail(detailData) {
+      if (includeSet.size > 0 && excludeSet.size > 0) {
+        throw new Error('VocabularyFilterAdapter: "includeIds" and "excludeIds"/"ignoredIds" are mutually exclusive. Only one can be specified.');
+      }
+      if (includeSet.size > 0) {
+        return filterVocabularyDetail(detailData, { includeIds: includeSet });
+      }
+      if (excludeSet.size > 0) {
+        return filterVocabularyDetail(detailData, { excludeIds: excludeSet });
+      }
+      return detailData;
+    },
+    wrapFetch(fetchFn = (typeof window !== 'undefined' ? window.fetch : fetch)) {
+      return async (input, init) => {
+        const res = await fetchFn(input, init);
+        if (!res.ok) return res;
+        try {
+          const clone = res.clone();
+          const json = await clone.json();
+          const isTree = json && CATEGORY_ORDER.some((cat) => Array.isArray(json[cat]));
+          const filtered = isTree ? this.filterTree(json) : this.filterDetail(json);
+          return new Response(JSON.stringify(filtered), {
+            status: res.status,
+            statusText: res.statusText,
+            headers: res.headers
+          });
+        } catch (_e) {
+          return res;
+        }
+      };
+    }
+  };
+}
+
+const HTMLElementBase = typeof HTMLElement !== 'undefined' ? HTMLElement : class {};
+
+/**
  * `<openatlas-vocabulary-viewer>` custom element.
  * @element openatlas-vocabulary-viewer
  */
-class OpenAtlasVocabularyViewer extends HTMLElement {
+class OpenAtlasVocabularyViewer extends HTMLElementBase {
   /** Attributes that trigger {@link attributeChangedCallback}. */
   static get observedAttributes() {
-    return ['tree-endpoint', 'detail-endpoint', 'lang', 'bootstrap-url', 'font-family', 'font-size'];
+    return [
+      'tree-endpoint',
+      'detail-endpoint',
+      'lang',
+      'bootstrap-url',
+      'font-family',
+      'font-size',
+      'ignored-ids',
+      'exclude-ids',
+      'include-ids',
+      'included-ids'
+    ];
   }
 
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
+    if (typeof this.attachShadow === 'function') {
+      this.attachShadow({ mode: 'open' });
+      this.shadowRoot.innerHTML = this.#skeleton();
+    }
 
-    /** @type {VocabularyTreeResponse|null} Last rendered tree data. */
+    /** @type {VocabularyTreeResponse|null} Last rendered (filtered) tree data. */
     this._treeData = null;
+    /** @type {VocabularyTreeResponse|null} Raw (unfiltered) tree data from endpoint or caller. */
+    this._rawTreeData = null;
+    /** @type {Set<number|string>} Set of IDs to ignore/exclude. */
+    this._ignoredIds = new Set();
+    /** @type {Set<number|string>} Set of IDs to include. */
+    this._includedIds = new Set();
+    /** @type {Set<number|string>} Set of IDs present in current rendered tree. */
+    this._visibleNodeIds = new Set();
     /** @type {number|null} Currently selected type id. */
     this._activeId = null;
     /** @type {boolean} Whether Bootstrap has been injected already. */
     this._bootstrapInjected = false;
-
-    this.shadowRoot.innerHTML = this.#skeleton();
   }
 
   /* ---------------------------------------------------------------------- */
@@ -230,6 +726,60 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
     return l === 'de' ? 'de' : 'en';
   }
 
+  /** @returns {number[]} Configured array of ignored IDs. */
+  get ignoredIds() {
+    return Array.from(this._ignoredIds);
+  }
+
+  /** @param {Array<number|string>|Set<number|string>|string|number|null|undefined} val */
+  set ignoredIds(val) {
+    const parsed = parseIds(val);
+    if (parsed.size > 0 && (this._includedIds.size > 0 || this.hasAttribute('include-ids') || this.hasAttribute('included-ids'))) {
+      throw new Error('openatlas-vocabulary-viewer: "include-ids" and "exclude-ids" ("ignored-ids") are mutually exclusive. Only one can be specified.');
+    }
+    this._ignoredIds = parsed;
+    if (this._rawTreeData) {
+      this.renderTree(this._rawTreeData);
+    }
+  }
+
+  /** @returns {number[]} Configured array of excluded IDs (alias for ignoredIds). */
+  get excludeIds() {
+    return this.ignoredIds;
+  }
+
+  /** @param {Array<number|string>|Set<number|string>|string|number|null|undefined} val */
+  set excludeIds(val) {
+    this.ignoredIds = val;
+  }
+
+  /** @returns {number[]} Configured array of included IDs. */
+  get includedIds() {
+    return Array.from(this._includedIds);
+  }
+
+  /** @param {Array<number|string>|Set<number|string>|string|number|null|undefined} val */
+  set includedIds(val) {
+    const parsed = parseIds(val);
+    if (parsed.size > 0 && (this._ignoredIds.size > 0 || this.hasAttribute('exclude-ids') || this.hasAttribute('ignored-ids'))) {
+      throw new Error('openatlas-vocabulary-viewer: "include-ids" and "exclude-ids" ("ignored-ids") are mutually exclusive. Only one can be specified.');
+    }
+    this._includedIds = parsed;
+    if (this._rawTreeData) {
+      this.renderTree(this._rawTreeData);
+    }
+  }
+
+  /** @returns {number[]} Configured array of included IDs (alias for includedIds). */
+  get includeIds() {
+    return this.includedIds;
+  }
+
+  /** @param {Array<number|string>|Set<number|string>|string|number|null|undefined} val */
+  set includeIds(val) {
+    this.includedIds = val;
+  }
+
   /** @returns {Object<string,string>} Active label set. */
   get #labels() {
     return LABELS[this.lang];
@@ -251,6 +801,21 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
   /* ---------------------------------------------------------------------- */
 
   connectedCallback() {
+    const hasInclude = (this.hasAttribute('include-ids') && this.getAttribute('include-ids') !== '') ||
+                       (this.hasAttribute('included-ids') && this.getAttribute('included-ids') !== '');
+    const hasExclude = (this.hasAttribute('exclude-ids') && this.getAttribute('exclude-ids') !== '') ||
+                       (this.hasAttribute('ignored-ids') && this.getAttribute('ignored-ids') !== '');
+
+    if (hasInclude && hasExclude) {
+      throw new Error('openatlas-vocabulary-viewer: "include-ids" and "exclude-ids" ("ignored-ids") are mutually exclusive. Only one can be specified.');
+    }
+
+    if (hasInclude) {
+      this._includedIds = parseIds(this.getAttribute('include-ids') || this.getAttribute('included-ids'));
+    } else if (hasExclude) {
+      this._ignoredIds = parseIds(this.getAttribute('exclude-ids') || this.getAttribute('ignored-ids'));
+    }
+
     this.#applyFont();
     this.#injectBootstrap();
     this.#applyStaticLabels();
@@ -282,7 +847,7 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
     }
 
     // Load the tree only once when first connected.
-    if (!this._treeData) {
+    if (!this._rawTreeData && !this._treeData) {
       this.loadTree();
     }
   }
@@ -305,7 +870,11 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
       case 'lang':
         this.#applyStaticLabels();
         // Re-render detail (labels inside it) and tree category headers.
-        if (this._treeData) this.renderTree(this._treeData);
+        if (this._rawTreeData) {
+          this.renderTree(this._rawTreeData);
+        } else if (this._treeData) {
+          this.renderTree(this._treeData);
+        }
         break;
       case 'bootstrap-url':
         this._bootstrapInjected = false;
@@ -314,6 +883,36 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
       case 'tree-endpoint':
         this.loadTree();
         break;
+      case 'include-ids':
+      case 'included-ids': {
+        const hasExclude = (this.hasAttribute('exclude-ids') && this.getAttribute('exclude-ids') !== '') ||
+                           (this.hasAttribute('ignored-ids') && this.getAttribute('ignored-ids') !== '') ||
+                           this._ignoredIds.size > 0;
+        const parsed = parseIds(newValue);
+        if (parsed.size > 0 && hasExclude) {
+          throw new Error('openatlas-vocabulary-viewer: "include-ids" and "exclude-ids" ("ignored-ids") are mutually exclusive. Only one can be specified.');
+        }
+        this._includedIds = parsed;
+        if (this._rawTreeData) {
+          this.renderTree(this._rawTreeData);
+        }
+        break;
+      }
+      case 'ignored-ids':
+      case 'exclude-ids': {
+        const hasInclude = (this.hasAttribute('include-ids') && this.getAttribute('include-ids') !== '') ||
+                           (this.hasAttribute('included-ids') && this.getAttribute('included-ids') !== '') ||
+                           this._includedIds.size > 0;
+        const parsed = parseIds(newValue);
+        if (parsed.size > 0 && hasInclude) {
+          throw new Error('openatlas-vocabulary-viewer: "include-ids" and "exclude-ids" ("ignored-ids") are mutually exclusive. Only one can be specified.');
+        }
+        this._ignoredIds = parsed;
+        if (this._rawTreeData) {
+          this.renderTree(this._rawTreeData);
+        }
+        break;
+      }
       default:
         break;
     }
@@ -322,6 +921,285 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
   /* ---------------------------------------------------------------------- */
   /* Public API                                                             */
   /* ---------------------------------------------------------------------- */
+
+  /**
+   * Set the list of IDs to ignore/exclude from the vocabulary tree and detail views.
+   * Excluded items and all their descendants will not be displayed.
+   * @param {Array<number|string>|Set<number|string>|string|number|null|undefined} ids
+   * @returns {this}
+   */
+  setIgnoredIds(ids) {
+    this.ignoredIds = ids;
+    return this;
+  }
+
+  /**
+   * Set the list of IDs to exclude (alias for setIgnoredIds).
+   * @param {Array<number|string>|Set<number|string>|string|number|null|undefined} ids
+   * @returns {this}
+   */
+  setExcludeIds(ids) {
+    return this.setIgnoredIds(ids);
+  }
+
+  /**
+   * Get the current array of ignored IDs.
+   * @returns {number[]}
+   */
+  getIgnoredIds() {
+    return this.ignoredIds;
+  }
+
+  /**
+   * Get the current array of excluded IDs (alias for getIgnoredIds).
+   * @returns {number[]}
+   */
+  getExcludeIds() {
+    return this.ignoredIds;
+  }
+
+  /**
+   * Add one or more IDs to the ignore list.
+   * @param {...(number|string|Array<number|string>)} ids
+   * @returns {this}
+   */
+  addIgnoredId(...ids) {
+    return this.addIgnoredIds(...ids);
+  }
+
+  /**
+   * Add one or more IDs to the ignore list.
+   * @param {...(number|string|Array<number|string>)} ids
+   * @returns {this}
+   */
+  addIgnoredIds(...ids) {
+    if (this._includedIds.size > 0 || (this.hasAttribute('include-ids') && this.getAttribute('include-ids') !== '') || (this.hasAttribute('included-ids') && this.getAttribute('included-ids') !== '')) {
+      throw new Error('openatlas-vocabulary-viewer: "include-ids" and "exclude-ids" ("ignored-ids") are mutually exclusive. Only one can be specified.');
+    }
+    for (const id of ids.flat(Infinity)) {
+      const parsed = parseIds(id);
+      for (const item of parsed) this._ignoredIds.add(item);
+    }
+    if (this._rawTreeData) {
+      this.renderTree(this._rawTreeData);
+    }
+    return this;
+  }
+
+  /**
+   * Remove one or more IDs from the ignore list.
+   * @param {...(number|string|Array<number|string>)} ids
+   * @returns {this}
+   */
+  removeIgnoredId(...ids) {
+    return this.removeIgnoredIds(...ids);
+  }
+
+  /**
+   * Remove one or more IDs from the ignore list.
+   * @param {...(number|string|Array<number|string>)} ids
+   * @returns {this}
+   */
+  removeIgnoredIds(...ids) {
+    for (const id of ids.flat(Infinity)) {
+      const parsed = parseIds(id);
+      for (const item of parsed) this._ignoredIds.delete(item);
+    }
+    if (this._rawTreeData) {
+      this.renderTree(this._rawTreeData);
+    }
+    return this;
+  }
+
+  /**
+   * Clear all ignored IDs, restoring full visibility of the vocabulary tree.
+   * @returns {this}
+   */
+  clearIgnoredIds() {
+    this._ignoredIds.clear();
+    if (this._rawTreeData) {
+      this.renderTree(this._rawTreeData);
+    }
+    return this;
+  }
+
+  /**
+   * Clear all excluded IDs (alias for clearIgnoredIds).
+   * @returns {this}
+   */
+  clearExcludeIds() {
+    return this.clearIgnoredIds();
+  }
+
+  /**
+   * Check whether a specific ID is currently configured to be ignored.
+   * @param {number|string} id
+   * @returns {boolean}
+   */
+  isIgnored(id) {
+    return this._ignoredIds.has(Number(id)) || this._ignoredIds.has(id) || this._ignoredIds.has(String(id));
+  }
+
+  /**
+   * Check whether a specific ID is excluded (alias for isIgnored).
+   * @param {number|string} id
+   * @returns {boolean}
+   */
+  isExcluded(id) {
+    return this.isIgnored(id);
+  }
+
+  /**
+   * Set the list of IDs to include in the vocabulary tree and detail views.
+   * When include-ids is active, only matching hierarchies/types and their subtrees are shown.
+   * @param {Array<number|string>|Set<number|string>|string|number|null|undefined} ids
+   * @returns {this}
+   */
+  setIncludedIds(ids) {
+    this.includedIds = ids;
+    return this;
+  }
+
+  /**
+   * Set the list of IDs to include (alias for setIncludedIds).
+   * @param {Array<number|string>|Set<number|string>|string|number|null|undefined} ids
+   * @returns {this}
+   */
+  setIncludeIds(ids) {
+    return this.setIncludedIds(ids);
+  }
+
+  /**
+   * Get the current array of included IDs.
+   * @returns {number[]}
+   */
+  getIncludedIds() {
+    return this.includedIds;
+  }
+
+  /**
+   * Get the current array of included IDs (alias for getIncludedIds).
+   * @returns {number[]}
+   */
+  getIncludeIds() {
+    return this.includedIds;
+  }
+
+  /**
+   * Add one or more IDs to the include list.
+   * @param {...(number|string|Array<number|string>)} ids
+   * @returns {this}
+   */
+  addIncludedId(...ids) {
+    return this.addIncludedIds(...ids);
+  }
+
+  /**
+   * Add one or more IDs to the include list.
+   * @param {...(number|string|Array<number|string>)} ids
+   * @returns {this}
+   */
+  addIncludedIds(...ids) {
+    if (this._ignoredIds.size > 0 || (this.hasAttribute('exclude-ids') && this.getAttribute('exclude-ids') !== '') || (this.hasAttribute('ignored-ids') && this.getAttribute('ignored-ids') !== '')) {
+      throw new Error('openatlas-vocabulary-viewer: "include-ids" and "exclude-ids" ("ignored-ids") are mutually exclusive. Only one can be specified.');
+    }
+    for (const id of ids.flat(Infinity)) {
+      const parsed = parseIds(id);
+      for (const item of parsed) this._includedIds.add(item);
+    }
+    if (this._rawTreeData) {
+      this.renderTree(this._rawTreeData);
+    }
+    return this;
+  }
+
+  /**
+   * Remove one or more IDs from the include list.
+   * @param {...(number|string|Array<number|string>)} ids
+   * @returns {this}
+   */
+  removeIncludedId(...ids) {
+    return this.removeIncludedIds(...ids);
+  }
+
+  /**
+   * Remove one or more IDs from the include list.
+   * @param {...(number|string|Array<number|string>)} ids
+   * @returns {this}
+   */
+  removeIncludedIds(...ids) {
+    for (const id of ids.flat(Infinity)) {
+      const parsed = parseIds(id);
+      for (const item of parsed) this._includedIds.delete(item);
+    }
+    if (this._rawTreeData) {
+      this.renderTree(this._rawTreeData);
+    }
+    return this;
+  }
+
+  /**
+   * Clear all included IDs, restoring full visibility of the vocabulary tree.
+   * @returns {this}
+   */
+  clearIncludedIds() {
+    this._includedIds.clear();
+    if (this._rawTreeData) {
+      this.renderTree(this._rawTreeData);
+    }
+    return this;
+  }
+
+  /**
+   * Clear all included IDs (alias for clearIncludedIds).
+   * @returns {this}
+   */
+  clearIncludeIds() {
+    return this.clearIncludedIds();
+  }
+
+  /**
+   * Check whether a specific ID is configured in included IDs.
+   * @param {number|string} id
+   * @returns {boolean}
+   */
+  isIncluded(id) {
+    return this._includedIds.has(Number(id)) || this._includedIds.has(id) || this._includedIds.has(String(id));
+  }
+
+  /**
+   * Check whether a specific ID is visible under current filter rules (include or exclude).
+   * @param {number|string} id
+   * @returns {boolean}
+   */
+  isVisible(id) {
+    if (this._includedIds.size > 0 && this._ignoredIds.size > 0) {
+      throw new Error('openatlas-vocabulary-viewer: "include-ids" and "exclude-ids" ("ignored-ids") are mutually exclusive. Only one can be specified.');
+    }
+    if (this._ignoredIds.size > 0) {
+      return !this.isIgnored(id);
+    }
+    if (this._includedIds.size > 0) {
+      if (this._visibleNodeIds.size > 0) {
+        return this._visibleNodeIds.has(Number(id)) || this._visibleNodeIds.has(id) || this._visibleNodeIds.has(String(id));
+      }
+      return this.isIncluded(id);
+    }
+    return true;
+  }
+
+  /**
+   * Clear all filter rules (both include and exclude).
+   * @returns {this}
+   */
+  clearFilters() {
+    this._ignoredIds.clear();
+    this._includedIds.clear();
+    if (this._rawTreeData) {
+      this.renderTree(this._rawTreeData);
+    }
+    return this;
+  }
 
   /**
    * Switch the UI language at runtime.
@@ -376,7 +1254,7 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
       const data = await res.json();
       this.renderTree(data);
       this.dispatchEvent(new CustomEvent('oa-tree-loaded', {
-        bubbles: true, composed: true, detail: { data }
+        bubbles: true, composed: true, detail: { data: this._treeData, rawData: data }
       }));
     } catch (error) {
       this.#showTreeError(error);
@@ -387,20 +1265,59 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
   /**
    * Render (or re-render) the tree from externally supplied data. This is
    * network-independent and can be driven by a host that supplies its own data.
+   * Applies any configured include/ignored IDs.
    * @param {VocabularyTreeResponse} data
    * @returns {void}
    */
   renderTree(data) {
-    this._treeData = data;
+    this._rawTreeData = data;
+    if (this._includedIds.size > 0 && this._ignoredIds.size > 0) {
+      throw new Error('openatlas-vocabulary-viewer: "include-ids" and "exclude-ids" ("ignored-ids") are mutually exclusive. Only one can be specified.');
+    }
+    const filtered = filterVocabularyTree(data, {
+      excludeIds: this._ignoredIds,
+      includeIds: this._includedIds
+    });
+    this._treeData = filtered;
+
+    this._visibleNodeIds = new Set();
+    const collectIds = (node) => {
+      if (!node) return;
+      this._visibleNodeIds.add(node.id);
+      const num = Number(node.id);
+      if (!isNaN(num)) this._visibleNodeIds.add(num);
+      if (Array.isArray(node.children)) {
+        node.children.forEach(collectIds);
+      }
+    };
+    for (const category of CATEGORY_ORDER) {
+      if (Array.isArray(filtered?.[category])) {
+        filtered[category].forEach(collectIds);
+      }
+    }
+
     const container = this.shadowRoot.getElementById('tree-container');
     if (!container) return;
+
+    if (this._activeId != null && !this.isVisible(this._activeId)) {
+      this._activeId = null;
+      const panel = this.shadowRoot.getElementById('detail-panel');
+      if (panel) {
+        panel.innerHTML = `
+          <div id="oa-empty-detail" class="oa-empty-detail text-center text-body-secondary p-5">
+            <div class="oa-empty-title h6">${esc(this.#labels.emptyDetail)}</div>
+            <div class="oa-empty-hint small">${esc(this.#labels.emptyDetailHint)}</div>
+          </div>
+        `;
+      }
+    }
 
     container.innerHTML = '';
     const frag = document.createDocumentFragment();
 
     let total = 0;
     for (const category of CATEGORY_ORDER) {
-      const items = Array.isArray(data?.[category]) ? data[category] : [];
+      const items = Array.isArray(filtered?.[category]) ? filtered[category] : [];
       if (!items.length) continue;
       total += items.length;
       frag.appendChild(this.#renderCategory(category, items));
@@ -429,6 +1346,20 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
    * @fires oa-vocabulary-error
    */
   async loadDetail(id) {
+    if (!this.isVisible(id)) {
+      this._activeId = null;
+      const panel = this.shadowRoot.getElementById('detail-panel');
+      if (panel) {
+        panel.innerHTML = `
+          <div id="oa-empty-detail" class="oa-empty-detail text-center text-body-secondary p-5">
+            <div class="oa-empty-title h6">${esc(this.#labels.emptyDetail)}</div>
+            <div class="oa-empty-hint small">${esc(this.#labels.emptyDetailHint)}</div>
+          </div>
+        `;
+      }
+      return;
+    }
+
     const panel = this.shadowRoot.getElementById('detail-panel');
     if (panel) panel.innerHTML = this.#spinner();
 
@@ -996,6 +1927,7 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
   /**
    * Build a breadcrumb path with clickable links for ancestors, looking up
    * names in the currently loaded tree or the item's parents/root data.
+   * Excludes any ancestor that is not visible under current filter rules.
    * @param {VocabularyFlatItem} item
    * @returns {string} HTML or empty string.
    */
@@ -1003,19 +1935,23 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
     let ancestors = this.#findAncestorPath(item.id);
     if (!ancestors.length) {
       if (Array.isArray(item.parents) && item.parents.length) {
-        ancestors = item.parents.map((p) => {
-          if (typeof p === 'object' && p !== null) {
-            return { id: p.id, name: p.name || this.#findNodeName(p.id) || `#${p.id}` };
-          }
-          return { id: p, name: this.#findNodeName(p) || `#${p}` };
-        });
+        ancestors = item.parents
+          .filter((p) => this.isVisible(typeof p === 'object' && p !== null ? p.id : p))
+          .map((p) => {
+            if (typeof p === 'object' && p !== null) {
+              return { id: p.id, name: p.name || this.#findNodeName(p.id) || `#${p.id}` };
+            }
+            return { id: p, name: this.#findNodeName(p) || `#${p}` };
+          });
       } else if (Array.isArray(item.root) && item.root.length) {
-        ancestors = item.root.map((id) => {
-          if (typeof id === 'object' && id !== null) {
-            return { id: id.id, name: id.name || this.#findNodeName(id.id) || `#${id.id}` };
-          }
-          return { id, name: this.#findNodeName(id) || `#${id}` };
-        });
+        ancestors = item.root
+          .filter((id) => this.isVisible(typeof id === 'object' && id !== null ? id.id : id))
+          .map((id) => {
+            if (typeof id === 'object' && id !== null) {
+              return { id: id.id, name: id.name || this.#findNodeName(id.id) || `#${id.id}` };
+            }
+            return { id, name: this.#findNodeName(id) || `#${id}` };
+          });
       }
     }
 
@@ -1064,20 +2000,26 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
 
   /**
    * Render direct sub-types as interactive navigation buttons.
+   * Excludes any subtype that is not visible under current filter rules.
    * @param {LinkedTypeItem[]|null|undefined} subTypes
    * @returns {string} HTML or empty string.
    */
   #renderSubtypes(subTypes) {
     if (!Array.isArray(subTypes) || !subTypes.length) return '';
+    const visibleSubtypes = subTypes.filter((sub) => {
+      const id = typeof sub === 'object' && sub !== null ? sub.id : sub;
+      return this.isVisible(id);
+    });
+    if (!visibleSubtypes.length) return '';
     const L = this.#labels;
-    const items = subTypes.map((sub) => `
+    const items = visibleSubtypes.map((sub) => `
       <button type="button" class="btn btn-sm btn-outline-secondary oa-nav-link-btn" data-nav-id="${sub.id}" title="${esc(sub.name)}">
         ${esc(sub.name)}
       </button>
     `).join(' ');
     return `
       <div class="oa-section mt-3">
-        <label class="oa-field-label">${esc(L.subtypes)} (${subTypes.length})</label>
+        <label class="oa-field-label">${esc(L.subtypes)} (${visibleSubtypes.length})</label>
         <div class="oa-badges">${items}</div>
       </div>
     `;
@@ -1804,6 +2746,20 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
   }
 }
 
-customElements.define('openatlas-vocabulary-viewer', OpenAtlasVocabularyViewer);
+if (typeof customElements !== 'undefined') {
+  customElements.define('openatlas-vocabulary-viewer', OpenAtlasVocabularyViewer);
+}
+
+export {
+  OpenAtlasVocabularyViewer,
+  parseIds,
+  parseIgnoredIds,
+  parseIncludedIds,
+  normalizeFilterOptions,
+  filterVocabularyItem,
+  filterVocabularyTree,
+  filterVocabularyDetail,
+  createVocabularyFilterAdapter
+};
 
 export default OpenAtlasVocabularyViewer;

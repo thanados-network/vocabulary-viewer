@@ -144,20 +144,40 @@ viewer.setFont({
 
 | Attribute         | Default                                                          | Description                                                             |
 |-------------------|------------------------------------------------------------------|-------------------------------------------------------------------------|
-| `tree-endpoint`   | `http://127.0.0.1:5000/api/1/vocabulary/tree`            | URL of the vocabulary tree endpoint. Changing it reloads the tree.      |
-| `detail-endpoint` | `http://127.0.0.1:5000/api/1/vocabulary/{id}`            | URL template for type details; `{id}` is replaced with the type id.     |
+| `tree-endpoint`   | `http://127.0.0.1:5000/api/1/vocabulary/tree`            | URL of the vocabulary tree endpoint. Overrides `DEFAULT_TREE_ENDPOINT`. Changing it reloads the tree. |
+| `detail-endpoint` | `http://127.0.0.1:5000/api/1/vocabulary/{id}`            | URL template for type details; `{id}` is replaced with the type id. Overrides `DEFAULT_DETAIL_ENDPOINT`. |
+| `bootstrap-url`   | `https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/.../bootstrap.min.css` | Bootstrap 5.3 stylesheet injected into the shadow root. Overrides `DEFAULT_BOOTSTRAP_URL`. |
 | `lang`            | `en`                                                             | UI language: `en` or `de`. Can be changed at runtime.                   |
-| `bootstrap-url`   | `https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/.../bootstrap.min.css` | Bootstrap 5.3 stylesheet injected into the shadow root.             |
+| `exclude-ids`     | `""`                                                             | Comma-separated or JSON array of IDs to ignore/exclude (e.g. `"209204, 213222"`). Mutually exclusive with `include-ids`. |
+| `ignored-ids`     | `""`                                                             | Alias for `exclude-ids`.                                                |
+| `include-ids`     | `""`                                                             | Comma-separated or JSON array of IDs to include (e.g. `"[209204, 213222]"`). Mutually exclusive with `exclude-ids`. |
+| `included-ids`    | `""`                                                             | Alias for `include-ids`.                                                |
 | `font-family`     | (CSS default)                                                    | Custom font family (e.g. `'Segoe UI', sans-serif`). Updates `--oa-font-family`. |
 | `font-size`       | (CSS default: `1rem`)                                            | Base font size (e.g. `'14px'`, `'1rem'`, or number `14`). Updates `--oa-font-size`. |
 
-### Public Methods
+### Public Methods & Properties
 
-| Method                                      | Description                                                                                  |
+| Method / Property                           | Description                                                                                  |
 |---------------------------------------------|----------------------------------------------------------------------------------------------|
 | `loadTree()`                                | Fetches the tree from `tree-endpoint` and renders it. Returns a `Promise<void>`.             |
 | `renderTree(data)`                          | Renders (or re-renders) the tree from externally supplied data — no network needed.          |
 | `loadDetail(id)`                            | Fetches a type's detail, renders the detail panel, and dispatches `oa-vocabulary-selected`.  |
+| `setIncludedIds(ids)`                       | Sets the list of IDs to include (`Array`, `Set`, comma-separated `string`, or `number`).     |
+| `getIncludedIds()`                          | Returns the current array of included IDs (`number[]`).                                      |
+| `addIncludedId(...ids)` / `addIncludedIds(...)` | Adds one or more IDs to the include list.                                                  |
+| `removeIncludedId(...ids)` / `removeIncludedIds(...)` | Removes one or more IDs from the include list.                                         |
+| `clearIncludedIds()`                        | Clears all included IDs.                                                                     |
+| `isIncluded(id)`                            | Checks if a specific ID is configured as included.                                           |
+| `includedIds` / `includeIds`                | Property accessors for getting / setting included IDs.                                       |
+| `setIgnoredIds(ids)` / `setExcludeIds(ids)` | Sets the list of IDs to ignore/exclude.                                                      |
+| `getIgnoredIds()` / `getExcludeIds()`       | Returns the current array of ignored/excluded IDs (`number[]`).                              |
+| `addIgnoredId(...ids)` / `addIgnoredIds(...)` | Adds one or more IDs to the ignore/exclude list.                                            |
+| `removeIgnoredId(...ids)` / `removeIgnoredIds(...)` | Removes one or more IDs from the ignore/exclude list.                                   |
+| `clearIgnoredIds()` / `clearExcludeIds()`   | Clears all ignored/excluded IDs and restores visibility.                                    |
+| `isIgnored(id)` / `isExcluded(id)`          | Checks if a specific ID is currently ignored/excluded.                                      |
+| `ignoredIds` / `excludeIds`                 | Property accessors for getting / setting ignored/excluded IDs.                               |
+| `isVisible(id)`                             | Checks if an ID is visible according to active filter rules.                                 |
+| `clearFilters()`                            | Clears both inclusion and exclusion filters.                                                 |
 | `setLanguage(lang)`                         | Switches the UI language (`'en'` \| `'de'`) at runtime.                                       |
 | `setFontFamily(fontFamily)`                 | Sets the font family at runtime (e.g. `'Roboto, sans-serif'`).                              |
 | `setFontSize(fontSize)`                     | Sets the base font size at runtime (e.g. `'14px'`, `'1rem'`, or `14`).                       |
@@ -165,6 +185,13 @@ viewer.setFont({
 
 ```js
 const viewer = document.querySelector('openatlas-vocabulary-viewer');
+
+// Exclude top-level hierarchies or specific types and all their descendant subtrees:
+viewer.setIgnoredIds([209204, 213222, 218845, 22777, 196063]);
+
+// Add / remove dynamically:
+viewer.addIgnoredIds(12345);
+viewer.removeIgnoredIds(209204);
 
 // Re-render the tree from your own data (e.g. server-rendered / cached):
 viewer.renderTree({ standard: [...], place: [...], custom: [], value: [], system: [] });
@@ -194,6 +221,120 @@ viewer.addEventListener('oa-vocabulary-selected', (e) => {
 viewer.addEventListener('oa-vocabulary-error', (e) => {
   console.warn('Vocabulary error in', e.detail.context, e.detail.error);
 });
+```
+
+---
+
+## Filtering & Adapter API
+
+The component provides two powerful, mutually exclusive filtering strategies to tailor the taxonomy displayed in the viewer:
+- **Exclude (`exclude-ids` / `ignored-ids`)**: Hides targeted type IDs along with all their descendant subtrees from the hierarchy tree, breadcrumbs, and subtypes listings.
+- **Include (`include-ids` / `included-ids`)**: Displays *only* the targeted type IDs (and their subtrees), keeping necessary ancestor branches navigable while pruning all unrelated categories and sibling nodes.
+
+> **Mutual Exclusivity Rule:** `include-ids` and `exclude-ids` (`ignored-ids`) are **mutually exclusive**. Only one filtering mode can be active at a time. If both are specified on the component, passed to the adapter, or set simultaneously, an explicit `Error` is thrown.
+
+### Example ID Lists
+
+```javascript
+// Example list to exclude or include:
+const typeIds = [209204, 213222, 218845, 22777, 196063];
+```
+
+### 1. Web Component Declarative Attributes
+
+Configure inclusion or exclusion directly in HTML:
+
+```html
+<!-- Exclude specific types and their descendants -->
+<openatlas-vocabulary-viewer
+  exclude-ids="[209204, 213222, 218845, 22777, 196063]"
+  tree-endpoint="http://127.0.0.1:5000/api/1/vocabulary/tree"
+  detail-endpoint="http://127.0.0.1:5000/api/1/vocabulary/{id}">
+</openatlas-vocabulary-viewer>
+
+<!-- OR Include only specific types and their subtrees -->
+<openatlas-vocabulary-viewer
+  include-ids="[209204, 213222]"
+  tree-endpoint="http://127.0.0.1:5000/api/1/vocabulary/tree"
+  detail-endpoint="http://127.0.0.1:5000/api/1/vocabulary/{id}">
+</openatlas-vocabulary-viewer>
+```
+
+Accepts JSON arrays (`"[209204, 213222]"`), comma-separated strings (`"209204, 213222, 218845"`), or whitespace-delimited lists.
+
+### 2. Web Component JavaScript API
+
+Manage include and exclude filters dynamically on the custom element:
+
+```javascript
+import { OpenAtlasVocabularyViewer } from './openatlas-vocabulary-viewer.js';
+
+const viewer = document.querySelector('openatlas-vocabulary-viewer');
+
+// --- Inclusion Filtering ---
+viewer.setIncludedIds([209204, 213222]);
+viewer.addIncludedId(218845);
+viewer.removeIncludedId(218845);
+console.log(viewer.isIncluded(209204)); // true
+viewer.clearIncludedIds();
+
+// --- Exclusion Filtering ---
+viewer.setIgnoredIds([209204, 213222, 218845, 22777, 196063]);
+viewer.addIgnoredIds(22777);
+viewer.removeIgnoredIds(22777);
+console.log(viewer.isIgnored(209204)); // true
+viewer.clearIgnoredIds();
+
+// --- Mutual Exclusivity Error Example ---
+try {
+  viewer.setIncludedIds([100]);
+  viewer.setIgnoredIds([200]); // Throws Error: mutually exclusive!
+} catch (err) {
+  console.error(err.message);
+}
+```
+
+### 3. Standalone Adapter (`createVocabularyFilterAdapter`)
+
+The module exports `createVocabularyFilterAdapter` for client-side use or backend proxies / middleware:
+
+```javascript
+import { createVocabularyFilterAdapter } from './openatlas-vocabulary-viewer.js';
+
+// 1. Create an inclusion adapter:
+const includeAdapter = createVocabularyFilterAdapter({ includeIds: [209204, 213222] });
+
+// OR create an exclusion adapter:
+const excludeAdapter = createVocabularyFilterAdapter({ excludeIds: [209204, 213222, 218845] });
+
+// 2. Wrap standard fetch as a transparent interceptor/adapter:
+const filteredFetch = includeAdapter.wrapFetch(window.fetch);
+
+// 3. Direct data filtering:
+const filteredTree = includeAdapter.filterTree(rawTreeData);
+const filteredDetail = includeAdapter.filterDetail(rawDetailData);
+```
+
+### 4. Pure Functional Utilities
+
+For lightweight data pipeline transformations:
+
+```javascript
+import {
+  filterVocabularyTree,
+  filterVocabularyItem,
+  filterVocabularyDetail,
+  parseIds
+} from './openatlas-vocabulary-viewer.js';
+
+// Include filter on tree payload:
+const includedTree = filterVocabularyTree(treeResponse, { includeIds: [209204, 213222] });
+
+// Exclude filter on tree payload:
+const excludedTree = filterVocabularyTree(treeResponse, { excludeIds: [209204, 213222] });
+
+// Filter detail payload:
+const filteredDetail = filterVocabularyDetail(detailResponse, { includeIds: [209204] });
 ```
 
 ---
@@ -232,10 +373,50 @@ viewer.addEventListener('oa-vocabulary-error', (e) => {
 
 ### Notes
 
-- **No client-side caching.** By design, caching is the host's responsibility (e.g. a Redis-backed
-  proxy). Just point `tree-endpoint` / `detail-endpoint` at your proxy.
-- **Clipboard** uses `navigator.clipboard` in secure contexts (HTTPS / `localhost`) and gracefully
-  falls back otherwise.
+- **Endpoints & Defaults:** `DEFAULT_TREE_ENDPOINT`, `DEFAULT_DETAIL_ENDPOINT`, and `DEFAULT_BOOTSTRAP_URL` are fallback defaults that can be overridden per instance via HTML attributes (`tree-endpoint`, `detail-endpoint`, `bootstrap-url`) or properties. `CATEGORY_ORDER` defines the standard OpenAtlas category sequence (`['standard', 'place', 'custom', 'value', 'tools', 'system']`).
+- **No client-side caching:** By design, caching is the host's responsibility (e.g. a Redis-backed proxy). Just point `tree-endpoint` / `detail-endpoint` at your proxy or feed data directly via `renderTree(data)`.
+- **Clipboard:** Uses `navigator.clipboard` in secure contexts (HTTPS / `localhost`) and gracefully falls back to `document.execCommand` otherwise.
+
+---
+
+## Integration in Multiple Websites
+
+If you want to use this component across multiple websites/projects, choose the integration approach that best fits your workflow:
+
+### Option 1: Direct Git Dependency via `npm` / `package.json` (Recommended for modern web apps)
+You do not even need to publish to public npm; npm/yarn/pnpm can install directly from GitHub:
+```bash
+npm install git+https://github.com/<owner>/vocabulary-viewer.git
+# or pin to a specific branch/tag/commit:
+npm install git+https://github.com/<owner>/vocabulary-viewer.git#v1.0.0
+```
+Then import it in your build setup (Vite, Webpack, Rollup, etc.):
+```javascript
+import 'openatlas-vocabulary-viewer';
+```
+
+### Option 2: Publish as an npm Package (`@openatlas/vocabulary-viewer`)
+Best for versioned releases and CI/CD pipelines:
+1. Initialize/maintain `package.json` in this repository with `"main": "openatlas-vocabulary-viewer.js"`.
+2. Publish to npm (`npm publish`) or GitHub Packages.
+3. In both client websites: `npm install @openatlas/vocabulary-viewer`.
+
+### Option 3: Git Submodule or Subtree (Best for monorepos or multi-repo vendoring)
+Add this repository as a submodule in each website's repository:
+```bash
+git submodule add https://github.com/<owner>/vocabulary-viewer.git vendor/vocabulary-viewer
+```
+Include the script in HTML:
+```html
+<script type="module" src="/vendor/vocabulary-viewer/openatlas-vocabulary-viewer.js"></script>
+```
+Updates can be pulled in each website with `git submodule update --remote`.
+
+### Option 4: CDN / Static Hosting (Simplest for static / CMS sites)
+Host `openatlas-vocabulary-viewer.js` on a shared server, CDN (such as jsDelivr/unpkg via GitHub release/npm tag), or reverse-proxy:
+```html
+<script type="module" src="https://cdn.example.org/js/openatlas-vocabulary-viewer.js"></script>
+```
 
 ---
 

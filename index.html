@@ -160,6 +160,25 @@
                value="http://127.0.0.1:5000/api/1/vocabulary/tree">
       </div>
       <button id="apply-endpoint" type="button">Apply endpoint</button>
+
+      <div>
+        <label for="ignored-ids">Exclude/Ignored IDs</label>
+        <input id="ignored-ids" type="text"
+               placeholder="e.g. 209204, 213222, 218845">
+      </div>
+      <button id="apply-ignored-ids" type="button">Apply Exclude IDs</button>
+      <button id="sample-ignored-ids" type="button">Use example exclude list</button>
+      <button id="clear-ignored-ids" type="button">Clear Exclude IDs</button>
+
+      <div>
+        <label for="included-ids">Include IDs</label>
+        <input id="included-ids" type="text"
+               placeholder="e.g. 209204, 213222">
+      </div>
+      <button id="apply-included-ids" type="button">Apply Include IDs</button>
+      <button id="sample-included-ids" type="button">Use sample include</button>
+      <button id="clear-included-ids" type="button">Clear Include IDs</button>
+      <button id="test-exclusivity" type="button" style="color: #b71c1c;">Test Mutual Exclusivity Error</button>
     </div>
 
     <!--
@@ -236,6 +255,72 @@
     document.getElementById('apply-endpoint').addEventListener('click', () => {
       const url = document.getElementById('endpoint').value.trim();
       if (url) viewer.setAttribute('tree-endpoint', url);
+    });
+
+    const exampleIds = [209204, 213222, 218845, 22777, 196063];
+    const sampleIncludeIds = [209204, 213222];
+
+    document.getElementById('apply-ignored-ids').addEventListener('click', () => {
+      const val = document.getElementById('ignored-ids').value.trim();
+      try {
+        viewer.setIgnoredIds(val);
+        logLine(`Exclude IDs set to: [${viewer.getIgnoredIds().join(', ')}]`);
+      } catch (err) {
+        logLine(`[ERROR] ${err.message}`);
+      }
+    });
+
+    document.getElementById('sample-ignored-ids').addEventListener('click', () => {
+      document.getElementById('ignored-ids').value = JSON.stringify(exampleIds);
+      try {
+        viewer.setIgnoredIds(exampleIds);
+        logLine(`Applied example exclude IDs: [${exampleIds.join(', ')}]`);
+      } catch (err) {
+        logLine(`[ERROR] ${err.message}`);
+      }
+    });
+
+    document.getElementById('clear-ignored-ids').addEventListener('click', () => {
+      document.getElementById('ignored-ids').value = '';
+      viewer.clearIgnoredIds();
+      logLine('Cleared exclude IDs');
+    });
+
+    document.getElementById('apply-included-ids').addEventListener('click', () => {
+      const val = document.getElementById('included-ids').value.trim();
+      try {
+        viewer.setIncludedIds(val);
+        logLine(`Include IDs set to: [${viewer.getIncludedIds().join(', ')}]`);
+      } catch (err) {
+        logLine(`[ERROR] ${err.message}`);
+      }
+    });
+
+    document.getElementById('sample-included-ids').addEventListener('click', () => {
+      document.getElementById('included-ids').value = JSON.stringify(sampleIncludeIds);
+      try {
+        viewer.setIncludedIds(sampleIncludeIds);
+        logLine(`Applied sample include IDs: [${sampleIncludeIds.join(', ')}]`);
+      } catch (err) {
+        logLine(`[ERROR] ${err.message}`);
+      }
+    });
+
+    document.getElementById('clear-included-ids').addEventListener('click', () => {
+      document.getElementById('included-ids').value = '';
+      viewer.clearIncludedIds();
+      logLine('Cleared include IDs');
+    });
+
+    document.getElementById('test-exclusivity').addEventListener('click', () => {
+      logLine('Testing mutual exclusivity error...');
+      try {
+        // Attempt to supply both include and exclude simultaneously
+        viewer.setIncludedIds([100]);
+        viewer.setIgnoredIds([200]);
+      } catch (err) {
+        logLine(`Successfully caught mutual exclusivity error: "${err.message}"`);
+      }
     });
   </script>
 </body>
