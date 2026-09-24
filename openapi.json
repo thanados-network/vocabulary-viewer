@@ -1,0 +1,3706 @@
+{
+  "components": {
+    "schemas": {
+      "AgentItem": {
+        "properties": {
+          "class": {
+            "description": "The OpenAtlas entity class.",
+            "title": "Class",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Short description or biographical note.",
+            "title": "Description"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "class",
+          "description"
+        ],
+        "title": "AgentItem",
+        "type": "object"
+      },
+      "AgentListResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/AgentItem"
+            },
+            "title": "Data",
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "AgentListResponse",
+        "type": "object"
+      },
+      "ApiIndexResponse": {
+        "properties": {
+          "documentation": {
+            "title": "Documentation",
+            "type": "string"
+          },
+          "manual": {
+            "title": "Manual",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "openapiSchema": {
+            "title": "Openapischema",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "openapiSchema",
+          "documentation",
+          "manual"
+        ],
+        "title": "ApiIndexResponse",
+        "type": "object"
+      },
+      "CaseStudyItem": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Description"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "subCaseStudies": {
+            "items": {
+              "$ref": "#/components/schemas/CaseStudyItem"
+            },
+            "title": "Subcasestudies",
+            "type": "array"
+          },
+          "uuid": {
+            "format": "uuid",
+            "title": "Uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "uuid",
+          "name"
+        ],
+        "title": "CaseStudyItem",
+        "type": "object"
+      },
+      "CaseStudyListResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/CaseStudyItem"
+            },
+            "title": "Data",
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "CaseStudyListResponse",
+        "type": "object"
+      },
+      "DateModel": {
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional textual note on date derivation, uncertainty, or source.",
+            "title": "Comment"
+          },
+          "earliest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Earliest possible date (terminus post quem), ISO 8601 formatted.",
+            "title": "Earliest"
+          },
+          "latest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Latest possible date (terminus ante quem), ISO 8601 formatted. Equal to earliest for exact dates.",
+            "title": "Latest"
+          }
+        },
+        "title": "DateModel",
+        "type": "object"
+      },
+      "EntityCountResponse": {
+        "properties": {
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "Count of entities grouped by OpenAtlas system class.",
+            "title": "Counts",
+            "type": "object"
+          }
+        },
+        "required": [
+          "counts"
+        ],
+        "title": "EntityCountResponse",
+        "type": "object"
+      },
+      "ExtensionsType": {
+        "enum": [
+          "json",
+          "ttl",
+          "xml",
+          "nt"
+        ],
+        "title": "ExtensionsType",
+        "type": "string"
+      },
+      "ExternalReferenceSystemModel": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Description or scope note of the reference system.",
+            "title": "Description"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "identifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The clean ID inside the external system without resolver prefix.",
+            "title": "Identifier"
+          },
+          "match_type": {
+            "$ref": "#/components/schemas/MatchTypeEnum",
+            "default": "exactMatch",
+            "description": "SKOS matching property."
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "system_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Main homepage URL of the authority file provider.",
+            "title": "System Url"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Direct link to the external entity.",
+            "title": "Url"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ExternalReferenceSystemModel",
+        "type": "object"
+      },
+      "FileItem": {
+        "properties": {
+          "bounds": {
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Leaflet image bounds in the form [[lat_sw, lon_sw], [lat_ne, lon_ne]].",
+            "title": "Bounds"
+          },
+          "creators": {
+            "description": "Authors, photographers, or creators of the file.",
+            "items": {
+              "$ref": "#/components/schemas/AgentItem"
+            },
+            "title": "Creators",
+            "type": "array"
+          },
+          "extension": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "File extension without leading dot.",
+            "title": "Extension"
+          },
+          "fileUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Direct URL to the original binary file.",
+            "title": "Fileurl"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "iiifBaseUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Base URL for IIIF Image API operations (without trailing slash).",
+            "title": "Iiifbaseurl"
+          },
+          "iiifManifestUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "URL to the IIIF Presentation API Manifest.",
+            "title": "Iiifmanifesturl"
+          },
+          "inheritedFrom": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The ID of the parent entity in the archaeological hierarchy from which this image is inherited.",
+            "title": "Inheritedfrom"
+          },
+          "license": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LicenseItem"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "License details for reuse."
+          },
+          "licenseHolders": {
+            "description": "Rights holders or copyright owners.",
+            "items": {
+              "$ref": "#/components/schemas/AgentItem"
+            },
+            "title": "Licenseholders",
+            "type": "array"
+          },
+          "mimetype": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Standard IANA media type.",
+            "title": "Mimetype"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "publicShareable": {
+            "description": "Flag indicating if the file may be shown publicly.",
+            "title": "Publicshareable",
+            "type": "boolean"
+          },
+          "thumbnailUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "URL to a static, pre-calculated preview image.",
+            "title": "Thumbnailurl"
+          },
+          "uuid": {
+            "format": "uuid",
+            "title": "Uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "uuid",
+          "name",
+          "publicShareable",
+          "license",
+          "mimetype"
+        ],
+        "title": "FileItem",
+        "type": "object"
+      },
+      "IiifInfo": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Url"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Version"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "IiifInfo",
+        "type": "object"
+      },
+      "IiifVersion": {
+        "enum": [
+          "2",
+          "3"
+        ],
+        "title": "IiifVersion",
+        "type": "string"
+      },
+      "ImageProcessingInfo": {
+        "properties": {
+          "availableImageSizes": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "example": {
+              "table": "100px",
+              "thumbnail": "200px"
+            },
+            "title": "Availableimagesizes",
+            "type": "object"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled",
+          "availableImageSizes"
+        ],
+        "title": "ImageProcessingInfo",
+        "type": "object"
+      },
+      "LicenseItem": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "description": "Display name of the license.",
+            "title": "Name",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Official link to the legal deed or license text.",
+            "title": "Url"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "LicenseItem",
+        "type": "object"
+      },
+      "LinkedTypeItem": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "LinkedTypeItem",
+        "type": "object"
+      },
+      "MapConfig": {
+        "properties": {
+          "clusterDisableAtZoom": {
+            "title": "Clusterdisableatzoom",
+            "type": "integer"
+          },
+          "clusterMaxRadius": {
+            "title": "Clustermaxradius",
+            "type": "integer"
+          },
+          "zoomDefault": {
+            "title": "Zoomdefault",
+            "type": "integer"
+          },
+          "zoomMax": {
+            "title": "Zoommax",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "zoomDefault",
+          "zoomMax",
+          "clusterMaxRadius",
+          "clusterDisableAtZoom"
+        ],
+        "title": "MapConfig",
+        "type": "object"
+      },
+      "MatchTypeEnum": {
+        "enum": [
+          "exactMatch",
+          "closeMatch"
+        ],
+        "title": "MatchTypeEnum",
+        "type": "string"
+      },
+      "OpenAtlasClassEnum": {
+        "enum": [
+          "acquisition",
+          "activity",
+          "artifact",
+          "bibliography",
+          "edition",
+          "external_reference",
+          "feature",
+          "file",
+          "group",
+          "human_remains",
+          "modification",
+          "move",
+          "person",
+          "place",
+          "production",
+          "reference_system",
+          "source",
+          "stratigraphic_unit",
+          "text",
+          "type"
+        ],
+        "title": "OpenAtlasClassEnum",
+        "type": "string"
+      },
+      "PropertyDetail": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Count"
+          },
+          "domainClassCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Domainclasscode"
+          },
+          "i18N": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PropertyI18n"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "i18NInverse": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PropertyI18n"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "nameInverse": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Nameinverse"
+          },
+          "rangeClassCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Rangeclasscode"
+          },
+          "sub": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Sub"
+          },
+          "super": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Super"
+          }
+        },
+        "required": [
+          "name",
+          "code"
+        ],
+        "title": "PropertyDetail",
+        "type": "object"
+      },
+      "PropertyI18n": {
+        "properties": {
+          "de": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "De"
+          },
+          "en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "En"
+          },
+          "fr": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Fr"
+          }
+        },
+        "title": "PropertyI18n",
+        "type": "object"
+      },
+      "PublicFileOverviewResponse": {
+        "properties": {
+          "data": {
+            "description": "Dictionary of licensed files, mapped by their ID",
+            "items": {
+              "$ref": "#/components/schemas/FileItem"
+            },
+            "title": "Data",
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "PublicFileOverviewResponse",
+        "type": "object"
+      },
+      "ReferenceModel": {
+        "properties": {
+          "citation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Full bibliographic citation text.",
+            "title": "Citation"
+          },
+          "class": {
+            "description": "The OpenAtlas entity class.",
+            "title": "Class",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pages": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Page number, range, folio, or plate reference.",
+            "title": "Pages"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Specific classification type.",
+            "title": "Type"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "class",
+          "type",
+          "pages",
+          "citation"
+        ],
+        "title": "ReferenceModel",
+        "type": "object"
+      },
+      "SystemClassItem": {
+        "properties": {
+          "crm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Crm"
+          },
+          "group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Group"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Icon"
+          },
+          "label": {
+            "description": "Translated label of the class.",
+            "title": "Label",
+            "type": "string"
+          },
+          "openatlasClass": {
+            "title": "Openatlasclass",
+            "type": "string"
+          },
+          "standardTypeId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Standardtypeid"
+          }
+        },
+        "required": [
+          "label",
+          "openatlasClass"
+        ],
+        "title": "SystemClassItem",
+        "type": "object"
+      },
+      "SystemClassesResponse": {
+        "properties": {
+          "locale": {
+            "default": "en",
+            "description": "The language used for labels.",
+            "title": "Locale",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SystemClassItem"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "title": "SystemClassesResponse",
+        "type": "object"
+      },
+      "SystemInfoResponse": {
+        "properties": {
+          "apiVersions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Apiversions",
+            "type": "array"
+          },
+          "defaultLanguage": {
+            "title": "Defaultlanguage",
+            "type": "string"
+          },
+          "iiif": {
+            "$ref": "#/components/schemas/IiifInfo"
+          },
+          "imageProcessing": {
+            "$ref": "#/components/schemas/ImageProcessingInfo"
+          },
+          "logoFileId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Logofileid"
+          },
+          "mapConfig": {
+            "$ref": "#/components/schemas/MapConfig"
+          },
+          "moduleTime": {
+            "description": "Whether the time module (hours, minutes, seconds) is enabled.",
+            "title": "Moduletime",
+            "type": "boolean"
+          },
+          "siteName": {
+            "title": "Sitename",
+            "type": "string"
+          },
+          "version": {
+            "description": "OpenAtlas Core Version",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "apiVersions",
+          "siteName",
+          "defaultLanguage",
+          "moduleTime",
+          "mapConfig",
+          "imageProcessing",
+          "iiif"
+        ],
+        "title": "SystemInfoResponse",
+        "type": "object"
+      },
+      "SystemPropertiesResponse": {
+        "properties": {
+          "properties": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PropertyDetail"
+            },
+            "title": "Properties",
+            "type": "object"
+          }
+        },
+        "required": [
+          "properties"
+        ],
+        "title": "SystemPropertiesResponse",
+        "type": "object"
+      },
+      "TimeSpan": {
+        "properties": {
+          "end": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DateModel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "End of the timespan."
+          },
+          "start": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DateModel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Beginning of the timespan."
+          }
+        },
+        "title": "TimeSpan",
+        "type": "object"
+      },
+      "TypeCategoryEnum": {
+        "enum": [
+          "standard",
+          "custom",
+          "place",
+          "value",
+          "system",
+          "tool",
+          "tools"
+        ],
+        "title": "TypeCategoryEnum",
+        "type": "string"
+      },
+      "ValidationErrorModel": {
+        "properties": {
+          "ctx": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "an optional object which contains values required to render the error message.",
+            "title": "Error context"
+          },
+          "loc": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "the error's location as a list. ",
+            "title": "Location"
+          },
+          "msg": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "a computer-readable identifier of the error type.",
+            "title": "Message"
+          },
+          "type_": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "a human readable explanation of the error.",
+            "title": "Error Type"
+          }
+        },
+        "title": "ValidationErrorModel",
+        "type": "object"
+      },
+      "VocabularyFlatItem": {
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TypeCategoryEnum"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Categorization of the type."
+          },
+          "class": {
+            "default": "type",
+            "description": "The OpenAtlas class.",
+            "title": "Class",
+            "type": "string"
+          },
+          "classes": {
+            "description": "Entity classes this type can be assigned to (e.g. 'artifact', 'place').",
+            "items": {
+              "type": "string"
+            },
+            "title": "Classes",
+            "type": "array"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Description"
+          },
+          "entityCount": {
+            "default": 0,
+            "description": "Number of entities directly linked to this exact type.",
+            "title": "Entitycount",
+            "type": "integer"
+          },
+          "entityCountSubs": {
+            "default": 0,
+            "description": "Number of entities linked to any of its descendants.",
+            "title": "Entitycountsubs",
+            "type": "integer"
+          },
+          "externalReferences": {
+            "description": "Links to external authority systems (Wikidata, Getty AAT, etc.).",
+            "items": {
+              "$ref": "#/components/schemas/ExternalReferenceSystemModel"
+            },
+            "title": "Externalreferences",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FileItem"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Primary representative image for the type."
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parents": {
+            "description": "Immediate parent types for breadcrumbs.",
+            "items": {
+              "$ref": "#/components/schemas/LinkedTypeItem"
+            },
+            "title": "Parents",
+            "type": "array"
+          },
+          "references": {
+            "description": "Bibliographic references and literature citations.",
+            "items": {
+              "$ref": "#/components/schemas/ReferenceModel"
+            },
+            "title": "References",
+            "type": "array"
+          },
+          "selectable": {
+            "default": true,
+            "description": "Whether this type can be directly assigned to an entity or serves only as a structural grouping node.",
+            "title": "Selectable",
+            "type": "boolean"
+          },
+          "subTypes": {
+            "description": "Direct sub-types under this node.",
+            "items": {
+              "$ref": "#/components/schemas/LinkedTypeItem"
+            },
+            "title": "Subtypes",
+            "type": "array"
+          },
+          "timespan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimeSpan"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Temporal validity or usage period."
+          },
+          "uuid": {
+            "format": "uuid",
+            "title": "Uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "uuid",
+          "name"
+        ],
+        "title": "VocabularyFlatItem",
+        "type": "object"
+      },
+      "VocabularyFlatResponse": {
+        "properties": {
+          "data": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/VocabularyFlatItem"
+            },
+            "title": "Data",
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "VocabularyFlatResponse",
+        "type": "object"
+      },
+      "VocabularyStandardResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/VocabularyTreeItem"
+            },
+            "title": "Data",
+            "type": "array"
+          }
+        },
+        "title": "VocabularyStandardResponse",
+        "type": "object"
+      },
+      "VocabularyTreeItem": {
+        "properties": {
+          "children": {
+            "description": "Nested child nodes.",
+            "items": {
+              "$ref": "#/components/schemas/VocabularyTreeItem"
+            },
+            "title": "Children",
+            "type": "array"
+          },
+          "classes": {
+            "description": "Entity classes this type is valid for.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Classes",
+            "type": "array"
+          },
+          "entityCount": {
+            "default": 0,
+            "description": "Number of entities directly linked to this exact type.",
+            "title": "Entitycount",
+            "type": "integer"
+          },
+          "entityCountSubs": {
+            "default": 0,
+            "description": "Number of entities linked to any of its descendants.",
+            "title": "Entitycountsubs",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "selectable": {
+            "default": true,
+            "description": "Whether this node can be selected/assigned or serves only as a category folder.",
+            "title": "Selectable",
+            "type": "boolean"
+          },
+          "uuid": {
+            "format": "uuid",
+            "title": "Uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "uuid",
+          "name"
+        ],
+        "title": "VocabularyTreeItem",
+        "type": "object"
+      },
+      "VocabularyTreeResponse": {
+        "properties": {
+          "custom": {
+            "items": {
+              "$ref": "#/components/schemas/VocabularyTreeItem"
+            },
+            "title": "Custom",
+            "type": "array"
+          },
+          "place": {
+            "items": {
+              "$ref": "#/components/schemas/VocabularyTreeItem"
+            },
+            "title": "Place",
+            "type": "array"
+          },
+          "standard": {
+            "items": {
+              "$ref": "#/components/schemas/VocabularyTreeItem"
+            },
+            "title": "Standard",
+            "type": "array"
+          },
+          "system": {
+            "items": {
+              "$ref": "#/components/schemas/VocabularyTreeItem"
+            },
+            "title": "System",
+            "type": "array"
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/VocabularyTreeItem"
+            },
+            "title": "Tools",
+            "type": "array"
+          },
+          "value": {
+            "items": {
+              "$ref": "#/components/schemas/VocabularyTreeItem"
+            },
+            "title": "Value",
+            "type": "array"
+          }
+        },
+        "title": "VocabularyTreeResponse",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {}
+  },
+  "info": {
+    "title": "OpenAtlas API V1",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/1/": {
+      "get": {
+        "description": "Returns the OpenAtlas API V1 root index pointing to documentation and</br>schemas.",
+        "operationId": "api_v1_root__get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiIndexResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "API Index",
+        "tags": [
+          "System"
+        ]
+      }
+    },
+    "/api/1/agents": {
+      "get": {
+        "operationId": "api_v1_metadata_agents_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentListResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get agents information",
+        "tags": [
+          "Metadata"
+        ]
+      }
+    },
+    "/api/1/agents/{id}": {
+      "get": {
+        "operationId": "api_v1_metadata_agents__int_id__get",
+        "parameters": [
+          {
+            "description": "Filter by a specific Agent ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Filter by a specific Agent ID",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentItem"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get information about an agent",
+        "tags": [
+          "Metadata"
+        ]
+      }
+    },
+    "/api/1/case-studies": {
+      "get": {
+        "operationId": "api_v1_metadata_case_studies_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseStudyListResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get case studies metadata",
+        "tags": [
+          "Metadata"
+        ]
+      }
+    },
+    "/api/1/case-studies/{id}": {
+      "get": {
+        "operationId": "api_v1_metadata_case_studies__int_id__get",
+        "parameters": [
+          {
+            "description": "Filter by a specific Case Study ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "Filter by a specific Case Study ID",
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseStudyItem"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "404": {
+            "description": "Case study not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get case study metadata",
+        "tags": [
+          "Metadata"
+        ]
+      }
+    },
+    "/api/1/entities/{entity_class}": {
+      "get": {
+        "description": "Retrieves a paginated collection of entities formatted as Linked Open Data.</br></br>This endpoint allows querying a specific system class</br>(e.g. `person`, `place`).</br>Results are returned as a Hydra Collection and can be filtered by various </br>query parameters such as search strings, dates, or case studies.",
+        "operationId": "api_v1_lod_entities__string_entity_class__get",
+        "parameters": [
+          {
+            "description": "Choose one of the following classes: ",
+            "examples": {
+              "acquisition": {
+                "summary": "Acquisition (E8 Acquisition)",
+                "value": "acquisition"
+              },
+              "activity": {
+                "summary": "Activity (E7 Activity)",
+                "value": "activity"
+              },
+              "administrative_unit": {
+                "summary": "Admin Unit (E53 Place)",
+                "value": "administrative_unit"
+              },
+              "artifact": {
+                "summary": "Artifact (E22 Human-Made Object)",
+                "value": "artifact"
+              },
+              "bibliography": {
+                "summary": "Bibliography (E31 Document)",
+                "value": "bibliography"
+              },
+              "feature": {
+                "summary": "Feature (E18 Physical Thing)",
+                "value": "feature"
+              },
+              "file": {
+                "summary": "File (E31 Document)",
+                "value": "file"
+              },
+              "group": {
+                "summary": "Group (E74 Group)",
+                "value": "group"
+              },
+              "human_remains": {
+                "summary": "Human Remains (E20 Biological Object)",
+                "value": "human_remains"
+              },
+              "modification": {
+                "summary": "Modification (E11 Modification)",
+                "value": "modification"
+              },
+              "move": {
+                "summary": "Move (E9 Move)",
+                "value": "move"
+              },
+              "person": {
+                "summary": "Person (E21 Person)",
+                "value": "person"
+              },
+              "place": {
+                "summary": "Place (E18 Physical Thing)",
+                "value": "place"
+              },
+              "production": {
+                "summary": "Production (E12 Production)",
+                "value": "production"
+              },
+              "source": {
+                "summary": "Source (E33 Linguistic Object)",
+                "value": "source"
+              },
+              "stratigraphic_unit": {
+                "summary": "Stratigraphic Unit (E18 Physical Thing)",
+                "value": "stratigraphic_unit"
+              },
+              "type": {
+                "summary": "Type (E55 Type)",
+                "value": "type"
+              }
+            },
+            "in": "path",
+            "name": "entity_class",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/OpenAtlasClassEnum",
+              "description": "Choose one of the following classes: "
+            }
+          },
+          {
+            "description": "Filter entities by name (case-insensitive substring match).",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Filter entities by name (case-insensitive substring match).",
+              "title": "Search"
+            }
+          },
+          {
+            "description": "Field to sort by: 'name', 'startDate', or 'endDate'.",
+            "in": "query",
+            "name": "sortBy",
+            "required": false,
+            "schema": {
+              "default": "name",
+              "description": "Field to sort by: 'name', 'startDate', or 'endDate'.",
+              "enum": [
+                "name",
+                "start_date",
+                "end_date"
+              ],
+              "title": "Sortby",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sort direction: 'asc' or 'desc'.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "description": "Sort direction: 'asc' or 'desc'.",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Number of records to return (max 100).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Number of records to return (max 100).",
+              "maximum": 100,
+              "minimum": 1.0,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page number (starting at 1).",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number (starting at 1).",
+              "minimum": 1.0,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Filter entities with begin date on or after this date (e.g. 0400-01-01, 400, -400).",
+            "in": "query",
+            "name": "startDate",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Filter entities with begin date on or after this date (e.g. 0400-01-01, 400, -400).",
+              "title": "Startdate"
+            }
+          },
+          {
+            "description": "Filter entities with end date on or before this date (e.g. 0400-12-31, 400, -400).",
+            "in": "query",
+            "name": "endDate",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Filter entities with end date on or before this date (e.g. 0400-12-31, 400, -400).",
+              "title": "Enddate"
+            }
+          },
+          {
+            "description": "Filter entities by type ID (integer) or type UUID.",
+            "in": "query",
+            "name": "typeId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Filter entities by type ID (integer) or type UUID.",
+              "title": "Typeid"
+            }
+          },
+          {
+            "description": "Filter entities by case study ID (integer) or case study UUID.",
+            "in": "query",
+            "name": "caseStudy",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Filter entities by case study ID (integer) or case study UUID.",
+              "title": "Casestudy"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/ld+json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "properties": {
+                    "@context": {
+                      "default": [
+                        "https://linked.art/ns/v1/linked-art.json",
+                        {
+                          "hydra": "http://www.w3.org/ns/hydra/core#"
+                        }
+                      ],
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "type": "object"
+                          }
+                        ]
+                      },
+                      "title": "@Context",
+                      "type": "array"
+                    },
+                    "@graph": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "title": "@Graph",
+                      "type": "array"
+                    },
+                    "hydra:first": {
+                      "title": "Hydra:First",
+                      "type": "string"
+                    },
+                    "hydra:last": {
+                      "title": "Hydra:Last",
+                      "type": "string"
+                    },
+                    "hydra:next": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "default": null,
+                      "title": "Hydra:Next"
+                    },
+                    "hydra:previous": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "default": null,
+                      "title": "Hydra:Previous"
+                    },
+                    "hydra:totalItems": {
+                      "title": "Hydra:Totalitems",
+                      "type": "integer"
+                    },
+                    "id": {
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "type": {
+                      "default": "hydra:PartialCollectionView",
+                      "title": "Type",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "hydra:totalItems",
+                    "hydra:first",
+                    "hydra:last",
+                    "@graph"
+                  ],
+                  "title": "LinkedArtCollectionResponse",
+                  "type": "object"
+                }
+              },
+              "application/n-triples": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/rdf+xml": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/turtle": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Collection response in different LOD formats with Hydra pagination"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "example": "Entity class not found",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Entity class not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get a polymorphic collection of entities",
+        "tags": [
+          "LOD"
+        ]
+      }
+    },
+    "/api/1/entity/{uuid}": {
+      "get": {
+        "description": "Retrieves a single entity formatted as Linked Open Data</br>(OpenAtlas CIDOC-CRM graph).</br></br>The response format defaults to `application/ld+json`. </br>You can request other formats (like Turtle or RDF/XML) using the `Accept`</br>HTTP header.",
+        "operationId": "api_v1_lod_entity__uuid_uuid__get",
+        "parameters": [
+          {
+            "description": "Unique identifier of the entity",
+            "in": "path",
+            "name": "uuid",
+            "required": true,
+            "schema": {
+              "description": "Unique identifier of the entity",
+              "format": "uuid",
+              "title": "Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/ld+json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "properties": {
+                    "@context": {
+                      "default": "https://linked.art/ns/v1/linked-art.json",
+                      "title": "@Context",
+                      "type": "string"
+                    },
+                    "id": {
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "type"
+                  ],
+                  "title": "LinkedArtResponse",
+                  "type": "object"
+                }
+              },
+              "application/n-triples": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/rdf+xml": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/turtle": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Entity response in different LOD formats"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "example": "Entity not found",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Entity not found."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get an LOD entity by UUID",
+        "tags": [
+          "LOD"
+        ]
+      }
+    },
+    "/api/1/entity/{uuid}.{ext}": {
+      "get": {
+        "description": "Retrieves a single LOD entity with a specific format extension.</br></br>This is an alternative to using the HTTP `Accept` header. </br>By appending an extension like `.json`, `.ttl`, or `.xml` to the URL, </br>the API will automatically return the entity in the requested format.",
+        "operationId": "api_v1_lod_entity__uuid_uuid___ext__get",
+        "parameters": [
+          {
+            "description": "Unique identifier of the entity",
+            "in": "path",
+            "name": "uuid",
+            "required": true,
+            "schema": {
+              "description": "Unique identifier of the entity",
+              "format": "uuid",
+              "title": "Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "File extension (.json, .ttl, .xml, .nt)",
+            "examples": {
+              "json": {
+                "summary": "JSON-LD Format",
+                "value": "json"
+              },
+              "ntriples": {
+                "summary": "N-Triples Format",
+                "value": "nt"
+              },
+              "turtle": {
+                "summary": "Turtle Format",
+                "value": "ttl"
+              },
+              "xml": {
+                "summary": "RDF/XML Format",
+                "value": "xml"
+              }
+            },
+            "in": "path",
+            "name": "ext",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ExtensionsType",
+              "description": "File extension (.json, .ttl, .xml, .nt)"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/ld+json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "properties": {
+                    "@context": {
+                      "default": "https://linked.art/ns/v1/linked-art.json",
+                      "title": "@Context",
+                      "type": "string"
+                    },
+                    "id": {
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "type"
+                  ],
+                  "title": "LinkedArtResponse",
+                  "type": "object"
+                }
+              },
+              "application/n-triples": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/rdf+xml": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/turtle": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Entity response in different LOD formats"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "example": "Entity not found",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Entity not found."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get an LOD entity by UUID with extension",
+        "tags": [
+          "LOD"
+        ]
+      }
+    },
+    "/api/1/files/public": {
+      "get": {
+        "description": "Retrieves all existing files with a license, their display URLs,</br>and metadata.",
+        "operationId": "api_v1_files_public_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicFileOverviewResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get licensed files overview",
+        "tags": [
+          "Files"
+        ]
+      }
+    },
+    "/api/1/files/{id}/display": {
+      "get": {
+        "description": "Serves the binary image file.",
+        "operationId": "api_v1_files__int_id__display_get",
+        "parameters": [
+          {
+            "description": "The ID of the file.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "The ID of the file.",
+              "title": "Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Set to true to force the browser to download the file instead of displaying it inline.",
+            "in": "query",
+            "name": "download",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Set to true to force the browser to download the file instead of displaying it inline.",
+              "title": "Download",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/*": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Returns the actual image file (JPEG, PNG, etc.)"
+          },
+          "404": {
+            "description": "File not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get image file",
+        "tags": [
+          "Files"
+        ]
+      }
+    },
+    "/api/1/files/{id}/thumbnail": {
+      "get": {
+        "description": "Serves the static, pre-calculated thumbnail image.",
+        "operationId": "api_v1_files__int_id__thumbnail_get",
+        "parameters": [
+          {
+            "description": "The ID of the file.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "The ID of the file.",
+              "title": "Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Set to true to force the browser to download the file instead of displaying it inline.",
+            "in": "query",
+            "name": "download",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Set to true to force the browser to download the file instead of displaying it inline.",
+              "title": "Download",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/*": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Returns the generated thumbnail image."
+          },
+          "404": {
+            "description": "File or thumbnail not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get thumbnail image",
+        "tags": [
+          "Files"
+        ]
+      }
+    },
+    "/api/1/iiif/{id}/annotation-list/{version}": {
+      "get": {
+        "description": "Returns the IIIF annotation list (v2) or page (v3).",
+        "operationId": "api_v1_iiif__int_id__annotation_list__string_version__get",
+        "parameters": [
+          {
+            "description": "The ID of the file.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "The ID of the file.",
+              "title": "Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The IIIF version.",
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IiifVersion",
+              "description": "The IIIF version."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "IIIF Annotation List/Page JSON"
+          },
+          "400": {
+            "description": "Unsupported IIIF version"
+          },
+          "403": {
+            "description": "File without license or not shareable"
+          },
+          "404": {
+            "description": "File not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get IIIF Annotation List/Page",
+        "tags": [
+          "IIIF"
+        ]
+      }
+    },
+    "/api/1/iiif/{id}/annotation/{version}": {
+      "get": {
+        "description": "Returns a specific IIIF annotation.",
+        "operationId": "api_v1_iiif__int_id__annotation__string_version__get",
+        "parameters": [
+          {
+            "description": "The ID of the annotation.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "The ID of the annotation.",
+              "title": "Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The IIIF version.",
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IiifVersion",
+              "description": "The IIIF version."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "IIIF Annotation JSON"
+          },
+          "400": {
+            "description": "Unsupported IIIF version"
+          },
+          "403": {
+            "description": "File without license or not shareable"
+          },
+          "404": {
+            "description": "Annotation or file not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get IIIF Annotation",
+        "tags": [
+          "IIIF"
+        ]
+      }
+    },
+    "/api/1/iiif/{id}/canvas/{version}": {
+      "get": {
+        "description": "Returns the IIIF canvas for a specific file and IIIF version.",
+        "operationId": "api_v1_iiif__int_id__canvas__string_version__get",
+        "parameters": [
+          {
+            "description": "The ID of the file.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "The ID of the file.",
+              "title": "Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The IIIF version.",
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IiifVersion",
+              "description": "The IIIF version."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "IIIF Canvas JSON"
+          },
+          "400": {
+            "description": "Unsupported IIIF version"
+          },
+          "403": {
+            "description": "File without license or not shareable"
+          },
+          "404": {
+            "description": "File not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get IIIF Canvas",
+        "tags": [
+          "IIIF"
+        ]
+      }
+    },
+    "/api/1/iiif/{id}/image/{version}": {
+      "get": {
+        "description": "Returns the IIIF image (annotation) for a specific file and version.",
+        "operationId": "api_v1_iiif__int_id__image__string_version__get",
+        "parameters": [
+          {
+            "description": "The ID of the file.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "The ID of the file.",
+              "title": "Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The IIIF version.",
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IiifVersion",
+              "description": "The IIIF version."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "IIIF Image JSON"
+          },
+          "400": {
+            "description": "Unsupported IIIF version"
+          },
+          "403": {
+            "description": "File without license or not shareable"
+          },
+          "404": {
+            "description": "File not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get IIIF Image",
+        "tags": [
+          "IIIF"
+        ]
+      }
+    },
+    "/api/1/iiif/{id}/manifest/{version}": {
+      "get": {
+        "description": "Returns the IIIF manifest for a specific file and IIIF version.",
+        "operationId": "api_v1_iiif__int_id__manifest__string_version__get",
+        "parameters": [
+          {
+            "description": "The ID of the file.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "The ID of the file.",
+              "title": "Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The IIIF version.",
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IiifVersion",
+              "description": "The IIIF version."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "IIIF Manifest JSON"
+          },
+          "400": {
+            "description": "Unsupported IIIF version"
+          },
+          "403": {
+            "description": "File without license or not shareable"
+          },
+          "404": {
+            "description": "File or annotation not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get IIIF Manifest",
+        "tags": [
+          "IIIF"
+        ]
+      }
+    },
+    "/api/1/loud/entities/{entity_class}": {
+      "get": {
+        "description": "Retrieves a paginated collection of entities formatted as strict</br>Linked.Art LOUD.",
+        "operationId": "api_v1_loud_entities__string_entity_class__get",
+        "parameters": [
+          {
+            "description": "Choose one of the following classes: ",
+            "examples": {
+              "acquisition": {
+                "summary": "Acquisition (E8 Acquisition)",
+                "value": "acquisition"
+              },
+              "activity": {
+                "summary": "Activity (E7 Activity)",
+                "value": "activity"
+              },
+              "administrative_unit": {
+                "summary": "Admin Unit (E53 Place)",
+                "value": "administrative_unit"
+              },
+              "artifact": {
+                "summary": "Artifact (E22 Human-Made Object)",
+                "value": "artifact"
+              },
+              "bibliography": {
+                "summary": "Bibliography (E31 Document)",
+                "value": "bibliography"
+              },
+              "feature": {
+                "summary": "Feature (E18 Physical Thing)",
+                "value": "feature"
+              },
+              "file": {
+                "summary": "File (E31 Document)",
+                "value": "file"
+              },
+              "group": {
+                "summary": "Group (E74 Group)",
+                "value": "group"
+              },
+              "human_remains": {
+                "summary": "Human Remains (E20 Biological Object)",
+                "value": "human_remains"
+              },
+              "modification": {
+                "summary": "Modification (E11 Modification)",
+                "value": "modification"
+              },
+              "move": {
+                "summary": "Move (E9 Move)",
+                "value": "move"
+              },
+              "person": {
+                "summary": "Person (E21 Person)",
+                "value": "person"
+              },
+              "place": {
+                "summary": "Place (E18 Physical Thing)",
+                "value": "place"
+              },
+              "production": {
+                "summary": "Production (E12 Production)",
+                "value": "production"
+              },
+              "source": {
+                "summary": "Source (E33 Linguistic Object)",
+                "value": "source"
+              },
+              "stratigraphic_unit": {
+                "summary": "Stratigraphic Unit (E18 Physical Thing)",
+                "value": "stratigraphic_unit"
+              },
+              "type": {
+                "summary": "Type (E55 Type)",
+                "value": "type"
+              }
+            },
+            "in": "path",
+            "name": "entity_class",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/OpenAtlasClassEnum",
+              "description": "Choose one of the following classes: "
+            }
+          },
+          {
+            "description": "Filter entities by name (case-insensitive substring match).",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Filter entities by name (case-insensitive substring match).",
+              "title": "Search"
+            }
+          },
+          {
+            "description": "Field to sort by: 'name', 'startDate', or 'endDate'.",
+            "in": "query",
+            "name": "sortBy",
+            "required": false,
+            "schema": {
+              "default": "name",
+              "description": "Field to sort by: 'name', 'startDate', or 'endDate'.",
+              "enum": [
+                "name",
+                "start_date",
+                "end_date"
+              ],
+              "title": "Sortby",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sort direction: 'asc' or 'desc'.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "description": "Sort direction: 'asc' or 'desc'.",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Number of records to return (max 100).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Number of records to return (max 100).",
+              "maximum": 100,
+              "minimum": 1.0,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page number (starting at 1).",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number (starting at 1).",
+              "minimum": 1.0,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Filter entities with begin date on or after this date (e.g. 0400-01-01, 400, -400).",
+            "in": "query",
+            "name": "startDate",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Filter entities with begin date on or after this date (e.g. 0400-01-01, 400, -400).",
+              "title": "Startdate"
+            }
+          },
+          {
+            "description": "Filter entities with end date on or before this date (e.g. 0400-12-31, 400, -400).",
+            "in": "query",
+            "name": "endDate",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Filter entities with end date on or before this date (e.g. 0400-12-31, 400, -400).",
+              "title": "Enddate"
+            }
+          },
+          {
+            "description": "Filter entities by type ID (integer) or type UUID.",
+            "in": "query",
+            "name": "typeId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Filter entities by type ID (integer) or type UUID.",
+              "title": "Typeid"
+            }
+          },
+          {
+            "description": "Filter entities by case study ID (integer) or case study UUID.",
+            "in": "query",
+            "name": "caseStudy",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Filter entities by case study ID (integer) or case study UUID.",
+              "title": "Casestudy"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/ld+json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "properties": {
+                    "@context": {
+                      "default": [
+                        "https://linked.art/ns/v1/linked-art.json",
+                        {
+                          "hydra": "http://www.w3.org/ns/hydra/core#"
+                        }
+                      ],
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "type": "object"
+                          }
+                        ]
+                      },
+                      "title": "@Context",
+                      "type": "array"
+                    },
+                    "@graph": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "title": "@Graph",
+                      "type": "array"
+                    },
+                    "hydra:first": {
+                      "title": "Hydra:First",
+                      "type": "string"
+                    },
+                    "hydra:last": {
+                      "title": "Hydra:Last",
+                      "type": "string"
+                    },
+                    "hydra:next": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "default": null,
+                      "title": "Hydra:Next"
+                    },
+                    "hydra:previous": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "default": null,
+                      "title": "Hydra:Previous"
+                    },
+                    "hydra:totalItems": {
+                      "title": "Hydra:Totalitems",
+                      "type": "integer"
+                    },
+                    "id": {
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "type": {
+                      "default": "hydra:PartialCollectionView",
+                      "title": "Type",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "hydra:totalItems",
+                    "hydra:first",
+                    "hydra:last",
+                    "@graph"
+                  ],
+                  "title": "LinkedArtCollectionResponse",
+                  "type": "object"
+                }
+              },
+              "application/n-triples": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/rdf+xml": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/turtle": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Collection response in different LOD formats with Hydra pagination"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "example": "Entity class not found",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Entity class not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get a polymorphic collection of Linked.Art LOUD entities",
+        "tags": [
+          "LOD"
+        ]
+      }
+    },
+    "/api/1/loud/entity/{uuid}": {
+      "get": {
+        "description": "Retrieves a single entity formatted as Linked Open Usable Data</br>(Linked.Art).</br></br>This endpoint applies strict profile cleaning to ensure</br>additionalProperties: false compliance with the Linked.Art standard.",
+        "operationId": "api_v1_loud_entity__uuid_uuid__get",
+        "parameters": [
+          {
+            "description": "Unique identifier of the entity",
+            "in": "path",
+            "name": "uuid",
+            "required": true,
+            "schema": {
+              "description": "Unique identifier of the entity",
+              "format": "uuid",
+              "title": "Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/ld+json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "properties": {
+                    "@context": {
+                      "default": "https://linked.art/ns/v1/linked-art.json",
+                      "title": "@Context",
+                      "type": "string"
+                    },
+                    "id": {
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "type"
+                  ],
+                  "title": "LinkedArtResponse",
+                  "type": "object"
+                }
+              },
+              "application/n-triples": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/rdf+xml": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/turtle": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Entity response in different LOD formats"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "example": "Entity not found",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Entity not found."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get a strictly compliant Linked.Art LOUD entity by UUID",
+        "tags": [
+          "LOD"
+        ]
+      }
+    },
+    "/api/1/loud/entity/{uuid}.{ext}": {
+      "get": {
+        "description": "Retrieves a single LOUD entity with a specific format extension.",
+        "operationId": "api_v1_loud_entity__uuid_uuid___ext__get",
+        "parameters": [
+          {
+            "description": "Unique identifier of the entity",
+            "in": "path",
+            "name": "uuid",
+            "required": true,
+            "schema": {
+              "description": "Unique identifier of the entity",
+              "format": "uuid",
+              "title": "Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "File extension (.json, .ttl, .xml, .nt)",
+            "examples": {
+              "json": {
+                "summary": "JSON-LD Format",
+                "value": "json"
+              },
+              "ntriples": {
+                "summary": "N-Triples Format",
+                "value": "nt"
+              },
+              "turtle": {
+                "summary": "Turtle Format",
+                "value": "ttl"
+              },
+              "xml": {
+                "summary": "RDF/XML Format",
+                "value": "xml"
+              }
+            },
+            "in": "path",
+            "name": "ext",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ExtensionsType",
+              "description": "File extension (.json, .ttl, .xml, .nt)"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/ld+json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "properties": {
+                    "@context": {
+                      "default": "https://linked.art/ns/v1/linked-art.json",
+                      "title": "@Context",
+                      "type": "string"
+                    },
+                    "id": {
+                      "title": "Id",
+                      "type": "string"
+                    },
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "type"
+                  ],
+                  "title": "LinkedArtResponse",
+                  "type": "object"
+                }
+              },
+              "application/n-triples": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/rdf+xml": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/turtle": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Entity response in different LOD formats"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "example": "Entity not found",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Entity not found."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get a strictly compliant Linked.Art LOUD entity by UUID with extension",
+        "tags": [
+          "LOD"
+        ]
+      }
+    },
+    "/api/1/system/classes": {
+      "get": {
+        "description": "Retrieves all OpenAtlas classes with their labels,</br>CIDOC CRM mapping, and frontend configurations.",
+        "operationId": "api_v1_system_classes_get",
+        "parameters": [
+          {
+            "description": "Choose language for labels (e.g., 'en', 'de').",
+            "in": "query",
+            "name": "locale",
+            "required": false,
+            "schema": {
+              "default": "en",
+              "description": "Choose language for labels (e.g., 'en', 'de').",
+              "title": "Locale",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemClassesResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get system classes",
+        "tags": [
+          "System"
+        ]
+      }
+    },
+    "/api/1/system/count/entities": {
+      "get": {
+        "description": "Retrieves system classes with a count of their instances, optionally</br>filtered by case study.",
+        "operationId": "api_v1_system_count_entities_get",
+        "parameters": [
+          {
+            "description": "Filter entity counts by a specific case study ID.",
+            "in": "query",
+            "name": "caseStudy",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Filter entity counts by a specific case study ID.",
+              "title": "Casestudy"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityCountResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get entity counts",
+        "tags": [
+          "System"
+        ]
+      }
+    },
+    "/api/1/system/crm-properties": {
+      "get": {
+        "description": "Retrieves all OpenAtlas CIDOC properties actively used by the system.</br></br>Returns a dictionary keyed by the CIDOC property code (e.g. 'P1', 'P2')</br>containing the domain and range class codes, inheritance structures</br>(sub/super properties), and internationalized labels for both directions</br>(forward and inverse).",
+        "operationId": "api_v1_system_crm_properties_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemPropertiesResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get CIDOC properties",
+        "tags": [
+          "System"
+        ]
+      }
+    },
+    "/api/1/system/info": {
+      "get": {
+        "description": "Retrieves the public configuration required to initialize the presentation</br>frontend.</br></br>This includes global settings like map configurations (zoom, clustering),</br>enabled features (time module, IIIF), and localization defaults.</br>Internal or sensitive backend configurations are explicitly excluded.",
+        "operationId": "api_v1_system_info_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemInfoResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get presentation frontend configuration",
+        "tags": [
+          "System"
+        ]
+      }
+    },
+    "/api/1/vocabulary": {
+      "get": {
+        "description": "Retrieves a flat list of all OpenAtlas types.",
+        "operationId": "api_v1_vocabulary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VocabularyFlatResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get flat types list",
+        "tags": [
+          "Vocabulary"
+        ]
+      }
+    },
+    "/api/1/vocabulary/standard/{openatlas_class}": {
+      "get": {
+        "description": "Retrieves standard OpenAtlas types filtered by a specific</br>OpenAtlas class, formatted for hierarchical UI components.",
+        "operationId": "api_v1_vocabulary_standard__string_openatlas_class__get",
+        "parameters": [
+          {
+            "description": "Filter the tree by a specific OpenAtlas class.",
+            "in": "path",
+            "name": "openatlas_class",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/OpenAtlasClassEnum",
+              "description": "Filter the tree by a specific OpenAtlas class."
+            }
+          },
+          {
+            "description": "Filter types by a specific case study ID.",
+            "in": "query",
+            "name": "caseStudy",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Filter types by a specific case study ID.",
+              "title": "Casestudy"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VocabularyStandardResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get standard types tree by OpenAtlas class",
+        "tags": [
+          "Vocabulary"
+        ]
+      }
+    },
+    "/api/1/vocabulary/tree": {
+      "get": {
+        "description": "Retrieves all OpenAtlas types sorted hierarchically into standard,</br>place, custom, value, and system categories.",
+        "operationId": "api_v1_vocabulary_tree_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VocabularyTreeResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get types tree",
+        "tags": [
+          "Vocabulary"
+        ]
+      }
+    },
+    "/api/1/vocabulary/tree/{openatlas_class}": {
+      "get": {
+        "description": "Retrieves all OpenAtlas types filtered by a specific OpenAtlas class.",
+        "operationId": "api_v1_vocabulary_tree__string_openatlas_class__get",
+        "parameters": [
+          {
+            "description": "Filter the tree by a specific OpenAtlas class.",
+            "in": "path",
+            "name": "openatlas_class",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/OpenAtlasClassEnum",
+              "description": "Filter the tree by a specific OpenAtlas class."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VocabularyTreeResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get types tree by OpenAtlas class",
+        "tags": [
+          "Vocabulary"
+        ]
+      }
+    },
+    "/api/1/vocabulary/{id}": {
+      "get": {
+        "description": "Retrieves information of one types.",
+        "operationId": "api_v1_vocabulary_int_id__get",
+        "parameters": [
+          {
+            "description": "ID of a type",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "ID of a type",
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VocabularyFlatItem"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get information of one type",
+        "tags": [
+          "Vocabulary"
+        ]
+      }
+    }
+  },
+  "tags": [
+    {
+      "description": "System information and configuration",
+      "name": "System"
+    },
+    {
+      "description": "Types and Vocabularies",
+      "name": "Vocabulary"
+    },
+    {
+      "description": "Linked Open Data Endpoints",
+      "name": "LOD"
+    },
+    {
+      "description": "Display and licenses",
+      "name": "Files"
+    },
+    {
+      "description": "IIIF endpoints",
+      "name": "IIIF"
+    },
+    {
+      "description": "Project metadata and case studies",
+      "name": "Metadata"
+    }
+  ]
+}

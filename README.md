@@ -151,10 +151,11 @@ viewer.addEventListener('oa-vocabulary-error', (e) => {
 - **Real-time search** — case-insensitive matching on type names (evaluated against the loaded
   data), rendering only the matches and their ancestors fully expanded, and showing a localized
   "no results" state when nothing matches.
-- **Detail panel** — name, category, UUID with a **copy-to-clipboard** button, description,
+- **Detail panel** — name, category, **copy-to-clipboard buttons** (Name, URL, UUID),
+  **concept download dropdown** (JSON-LD, Turtle, RDF/XML, N-Triples), description,
   external references as linked badges (Wikidata, Getty AAT, translations, …), bibliography, and an
   image thumbnail. Empty sections are omitted automatically.
-- **Breadcrumb** path derived from the type's ancestors.
+- **Interactive breadcrumb** path derived from the type's ancestors with clickable navigation links.
 - **Robust error handling** — failed fetches show an in-component error state (with retry for the
   tree) and fire `oa-vocabulary-error`; the UI stays usable.
 

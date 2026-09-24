@@ -41,9 +41,19 @@ const LABELS = {
     emptyDetailHint: 'Select a type from the tree to see its details.',
     category: 'Category',
     uuid: 'UUID',
+    name: 'Name',
+    url: 'URL',
     copy: 'Copy',
+    copyUuid: 'Copy UUID',
+    copyUrl: 'Copy URL',
+    copyName: 'Copy Name',
     copied: 'Copied!',
     copyFailed: 'Copy failed',
+    downloadConcept: 'Download this concept',
+    formatJsonLd: 'JSON-LD',
+    formatTurtle: 'Turtle',
+    formatRdfXml: 'RDF/XML',
+    formatNTriples: 'N-Triples',
     description: 'Description',
     externalReferences: 'External references',
     bibliography: 'Bibliography',
@@ -66,9 +76,19 @@ const LABELS = {
     emptyDetailHint: 'Wählen Sie einen Typ im Baum aus, um Details zu sehen.',
     category: 'Kategorie',
     uuid: 'UUID',
+    name: 'Name',
+    url: 'URL',
     copy: 'Kopieren',
+    copyUuid: 'UUID kopieren',
+    copyUrl: 'URL kopieren',
+    copyName: 'Name kopieren',
     copied: 'Kopiert!',
     copyFailed: 'Kopieren fehlgeschlagen',
+    downloadConcept: 'Konzept herunterladen',
+    formatJsonLd: 'JSON-LD',
+    formatTurtle: 'Turtle',
+    formatRdfXml: 'RDF/XML',
+    formatNTriples: 'N-Triples',
     description: 'Beschreibung',
     externalReferences: 'Externe Verweise',
     bibliography: 'Bibliografie',
@@ -158,6 +178,17 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
     return LABELS[this.lang];
   }
 
+  /**
+   * Base API origin/path extracted from detail/tree endpoints for LOD & export links.
+   * @returns {string}
+   */
+  get #apiBase() {
+    const ep = this.detailEndpoint || this.treeEndpoint || DEFAULT_DETAIL_ENDPOINT;
+    const replaced = ep.replace(/\/vocabulary(\/.*)?$/, '');
+    if (replaced !== ep) return replaced;
+    return ep.replace(/\/+$/, '');
+  }
+
   /* ---------------------------------------------------------------------- */
   /* Lifecycle                                                              */
   /* ---------------------------------------------------------------------- */
@@ -170,6 +201,26 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
     if (search && !this._searchWired) {
       search.addEventListener('input', (e) => this.#filterTree(e.target.value));
       this._searchWired = true;
+    }
+
+    if (!this._dismissWired) {
+      this.shadowRoot.addEventListener('click', (e) => {
+        if (!e.target.closest('.oa-download-dropdown')) {
+          this.shadowRoot.querySelectorAll('.oa-download-dropdown.show').forEach((el) => {
+            el.classList.remove('show');
+            el.querySelector('.oa-btn-download')?.setAttribute('aria-expanded', 'false');
+          });
+        }
+      });
+      this.shadowRoot.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          this.shadowRoot.querySelectorAll('.oa-download-dropdown.show').forEach((el) => {
+            el.classList.remove('show');
+            el.querySelector('.oa-btn-download')?.setAttribute('aria-expanded', 'false');
+          });
+        }
+      });
+      this._dismissWired = true;
     }
 
     // Load the tree only once when first connected.
@@ -437,15 +488,83 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
     li._built = true;
   }
 
-  /** Mark the node with the given id active and clear previous highlight. @param {number} id */
+  /** Mark the node with the given id active, expand ancestors, and clear previous highlight. @param {number} id */
   #highlightActive(id) {
+    this.#revealInTree(id);
     this.shadowRoot.querySelectorAll('.oa-node-row.active')
       .forEach((el) => el.classList.remove('active'));
     const li = this.shadowRoot.querySelector(`.oa-node[data-id="${CSS.escape(String(id))}"]`);
     if (li) {
       const row = li.querySelector(':scope > .oa-node-row');
-      if (row) row.classList.add('active');
+      if (row) {
+        row.classList.add('active');
+        row.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+      }
     }
+  }
+
+  /**
+   * Ensure all ancestor tree nodes of the given id are expanded in the DOM.
+   * @param {number} id
+   */
+  #revealInTree(id) {
+    const ancestors = this.#findAncestorPath(id);
+    for (const anc of ancestors) {
+      const li = this.shadowRoot.querySelector(`.oa-node[data-id="${CSS.escape(String(anc.id))}"]`);
+      if (li) {
+        const toggle = li.querySelector(':scope > .oa-node-row > .oa-toggle');
+        const childUl = li.querySelector(':scope > ul.oa-tree');
+        if (toggle && toggle.dataset.expanded !== 'true') {
+          toggle.dataset.expanded = 'true';
+          toggle.textContent = '▾';
+          this.#buildChildren(li);
+          if (childUl) childUl.hidden = false;
+        }
+      }
+    }
+  }
+
+  /**
+   * Find the path of ancestor nodes leading to the given id in the loaded tree.
+   * @param {number} id
+   * @returns {Array<{id: number, name: string}>}
+   */
+  #findAncestorPath(id) {
+    if (!this._treeData) return [];
+    for (const cat of CATEGORY_ORDER) {
+      const roots = Array.isArray(this._treeData[cat]) ? this._treeData[cat] : [];
+      for (const root of roots) {
+        const path = [];
+        if (this.#searchTreePath(root, id, path)) {
+          path.pop(); // remove target node itself
+          return path;
+        }
+      }
+    }
+    return [];
+  }
+
+  /**
+   * Recursive tree path search helper.
+   * @param {VocabularyTreeItem} node
+   * @param {number} targetId
+   * @param {Array<{id: number, name: string}>} currentPath
+   * @returns {boolean}
+   */
+  #searchTreePath(node, targetId, currentPath) {
+    currentPath.push({ id: node.id, name: node.name || `#${node.id}` });
+    if (node.id === targetId) {
+      return true;
+    }
+    if (Array.isArray(node.children)) {
+      for (const child of node.children) {
+        if (this.#searchTreePath(child, targetId, currentPath)) {
+          return true;
+        }
+      }
+    }
+    currentPath.pop();
+    return false;
   }
 
   /* ---------------------------------------------------------------------- */
@@ -547,18 +666,48 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
 
     const parts = [];
 
-    // UUID copy button, pinned to the top-right corner of the detail panel.
-    if (item.uuid) {
-      parts.push(`
-        <button type="button" class="btn btn-sm oa-copy-btn oa-copy-corner" data-copy="${esc(item.uuid)}" title="${esc(L.uuid)}: ${esc(item.uuid)}">
-          <span class="oa-copy-icon" aria-hidden="true">\u29c9</span> ${esc(L.copy)} ${esc(L.uuid)}
-        </button>
-      `);
-    }
-
-    // Breadcrumb from root ancestor ids (best-effort name lookup in the tree).
     const crumb = this.#renderBreadcrumb(item);
-    if (crumb) parts.push(crumb);
+    const conceptUrl = item.uuid
+      ? `${this.#apiBase}/entity/${item.uuid}`
+      : `${this.#apiBase}/vocabulary/${item.id}`;
+    const downloadBase = item.uuid
+      ? `${this.#apiBase}/entity/${item.uuid}`
+      : `${this.#apiBase}/vocabulary/${item.id}`;
+
+    // Top action bar: breadcrumb on left, copy & download action buttons on right.
+    parts.push(`
+      <div class="oa-detail-top d-flex justify-content-between align-items-start gap-2 mb-2 flex-wrap">
+        <div class="oa-breadcrumb-wrap flex-grow-1">
+          ${crumb}
+        </div>
+        <div class="oa-detail-actions d-flex flex-wrap gap-1 align-items-center">
+          <button type="button" class="btn btn-sm oa-copy-btn" data-copy="${esc(item.name)}" title="${esc(L.copyName)}: ${esc(item.name)}">
+            <span class="oa-copy-icon" aria-hidden="true">\u29c9</span> ${esc(L.copyName)}
+          </button>
+          <button type="button" class="btn btn-sm oa-copy-btn" data-copy="${esc(conceptUrl)}" title="${esc(L.copyUrl)}: ${esc(conceptUrl)}">
+            <span class="oa-copy-icon" aria-hidden="true">\u29c9</span> ${esc(L.copyUrl)}
+          </button>
+          ${item.uuid ? `
+          <button type="button" class="btn btn-sm oa-copy-btn" data-copy="${esc(item.uuid)}" title="${esc(L.uuid)}: ${esc(item.uuid)}">
+            <span class="oa-copy-icon" aria-hidden="true">\u29c9</span> ${esc(L.copyUuid)}
+          </button>
+          ` : ''}
+          ${item.uuid ? `
+          <div class="dropdown oa-download-dropdown d-inline-block">
+            <button class="btn btn-sm oa-btn-download dropdown-toggle" type="button" aria-expanded="false" title="${esc(L.downloadConcept)}">
+              <span class="oa-download-icon" aria-hidden="true">\u2913</span> ${esc(L.downloadConcept)}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end oa-download-menu">
+              <li><a class="dropdown-item small" href="${esc(downloadBase + '.json')}" target="_blank" download="${esc(item.name || item.uuid)}.json" rel="noopener noreferrer">${esc(L.formatJsonLd)} (.json)</a></li>
+              <li><a class="dropdown-item small" href="${esc(downloadBase + '.ttl')}" target="_blank" download="${esc(item.name || item.uuid)}.ttl" rel="noopener noreferrer">${esc(L.formatTurtle)} (.ttl)</a></li>
+              <li><a class="dropdown-item small" href="${esc(downloadBase + '.xml')}" target="_blank" download="${esc(item.name || item.uuid)}.xml" rel="noopener noreferrer">${esc(L.formatRdfXml)} (.xml)</a></li>
+              <li><a class="dropdown-item small" href="${esc(downloadBase + '.nt')}" target="_blank" download="${esc(item.name || item.uuid)}.nt" rel="noopener noreferrer">${esc(L.formatNTriples)} (.nt)</a></li>
+            </ul>
+          </div>
+          ` : ''}
+        </div>
+      </div>
+    `);
 
     // Header: title + category badge.
     const catName = item.category ? (L.categories[item.category] || item.category) : '';
@@ -595,25 +744,81 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
 
     panel.innerHTML = `<div class="oa-detail p-3 position-relative">${parts.join('')}</div>`;
 
-    const copyBtn = panel.querySelector('.oa-copy-btn');
-    if (copyBtn) {
-      copyBtn.addEventListener('click', () => this.#copyUri(copyBtn.dataset.copy, copyBtn));
+    // Breadcrumb navigation click handlers.
+    panel.querySelectorAll('.oa-breadcrumb-link').forEach((link) => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const id = Number(link.dataset.id);
+        if (id) {
+          this.loadDetail(id);
+        }
+      });
+    });
+
+    // Copy buttons click handlers.
+    panel.querySelectorAll('.oa-copy-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const val = btn.dataset.copy;
+        if (val) this.#copyValue(val, btn);
+      });
+    });
+
+    // Download dropdown toggle handler.
+    const downloadDropdown = panel.querySelector('.oa-download-dropdown');
+    if (downloadDropdown) {
+      const toggle = downloadDropdown.querySelector('.oa-btn-download');
+      if (toggle) {
+        toggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isOpen = downloadDropdown.classList.contains('show');
+          this.shadowRoot.querySelectorAll('.oa-download-dropdown.show').forEach((el) => {
+            el.classList.remove('show');
+            el.querySelector('.oa-btn-download')?.setAttribute('aria-expanded', 'false');
+          });
+          if (!isOpen) {
+            downloadDropdown.classList.add('show');
+            toggle.setAttribute('aria-expanded', 'true');
+          }
+        });
+      }
     }
   }
 
   /**
-   * Build a breadcrumb path from the item's `root` ancestor id list, looking up
-   * names in the currently loaded tree where possible.
+   * Build a breadcrumb path with clickable links for ancestors, looking up
+   * names in the currently loaded tree or the item's parents/root data.
    * @param {VocabularyFlatItem} item
    * @returns {string} HTML or empty string.
    */
   #renderBreadcrumb(item) {
-    const roots = Array.isArray(item.root) ? item.root : [];
-    if (!roots.length) return '';
-    const names = roots.map((id) => this.#findNodeName(id) || `#${id}`);
-    names.push(item.name);
-    const crumbs = names.map((n) => `<li class="breadcrumb-item">${esc(n)}</li>`).join('');
-    return `<nav aria-label="breadcrumb"><ol class="breadcrumb oa-breadcrumb small mb-2">${crumbs}</ol></nav>`;
+    let ancestors = this.#findAncestorPath(item.id);
+    if (!ancestors.length) {
+      if (Array.isArray(item.parents) && item.parents.length) {
+        ancestors = item.parents.map((p) => {
+          if (typeof p === 'object' && p !== null) {
+            return { id: p.id, name: p.name || this.#findNodeName(p.id) || `#${p.id}` };
+          }
+          return { id: p, name: this.#findNodeName(p) || `#${p}` };
+        });
+      } else if (Array.isArray(item.root) && item.root.length) {
+        ancestors = item.root.map((id) => {
+          if (typeof id === 'object' && id !== null) {
+            return { id: id.id, name: id.name || this.#findNodeName(id.id) || `#${id.id}` };
+          }
+          return { id, name: this.#findNodeName(id) || `#${id}` };
+        });
+      }
+    }
+
+    if (!ancestors.length) return '';
+
+    const crumbs = ancestors.map((anc) => `
+      <li class="breadcrumb-item">
+        <a href="#" class="oa-breadcrumb-link" data-id="${esc(anc.id)}" title="${esc(anc.name)}">${esc(anc.name)}</a>
+      </li>
+    `);
+    crumbs.push(`<li class="breadcrumb-item active" aria-current="page">${esc(item.name)}</li>`);
+    return `<nav aria-label="breadcrumb"><ol class="breadcrumb oa-breadcrumb small mb-0">${crumbs.join('')}</ol></nav>`;
   }
 
   /** Find a node's name by id in the loaded tree. @param {number} id @returns {string|null} */
@@ -735,14 +940,14 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
    * @param {HTMLButtonElement} button
    * @returns {Promise<void>}
    */
-  async #copyUri(value, button) {
+  async #copyValue(value, button) {
     const L = this.#labels;
+    const originalHtml = button.innerHTML;
     const done = (ok) => {
-      const original = L.copy;
-      button.textContent = ok ? L.copied : L.copyFailed;
+      button.innerHTML = `<span class="oa-copy-icon" aria-hidden="true">${ok ? '\u2713' : '\u2717'}</span> ${esc(ok ? L.copied : L.copyFailed)}`;
       button.classList.toggle('oa-copied', ok);
       setTimeout(() => {
-        button.textContent = original;
+        button.innerHTML = originalHtml;
         button.classList.remove('oa-copied');
       }, 1500);
     };
@@ -765,6 +970,11 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
     } catch (_e) {
       done(false);
     }
+  }
+
+  /** Alias for backward compatibility. @param {string} value @param {HTMLButtonElement} button */
+  async #copyUri(value, button) {
+    return this.#copyValue(value, button);
   }
 
   /* ---------------------------------------------------------------------- */
@@ -997,16 +1207,43 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
         font-size: .85rem; word-break: break-all;
       }
       .oa-copy-btn { border: 1px solid var(--oa-border); color: var(--oa-text); background: var(--oa-bg); }
+      .oa-copy-btn:hover { background: var(--oa-hover-bg); color: var(--oa-text); }
       .oa-copy-btn.oa-copied { background: var(--oa-active-bg); color: var(--oa-active-text); border-color: var(--oa-active-bg); }
       .oa-copy-corner { position: absolute; top: .75rem; right: .75rem; z-index: 2; white-space: nowrap; }
       .oa-copy-icon { font-size: .9em; }
 
-      /* Keep the header/breadcrumb clear of the corner copy button. */
-      .oa-detail .oa-breadcrumb, .oa-detail-header { padding-right: 7rem; }
+      .oa-btn-download { border: 1px solid var(--oa-border); color: var(--oa-text); background: var(--oa-bg); }
+      .oa-btn-download:hover, .oa-btn-download:focus { background: var(--oa-hover-bg); color: var(--oa-text); }
+      .oa-download-dropdown { position: relative; }
+      .oa-download-menu {
+        position: absolute; right: 0; top: 100%; z-index: 1050;
+        min-width: 10.5rem; padding: .5rem 0; margin: .125rem 0 0;
+        font-size: .85rem; color: var(--oa-text); text-align: left;
+        list-style: none; background-color: var(--oa-bg);
+        border: 1px solid var(--oa-border); border-radius: .375rem;
+        box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15);
+        display: none;
+      }
+      .oa-download-dropdown.show .oa-download-menu { display: block; }
+      .oa-download-menu .dropdown-item {
+        display: block; width: 100%; padding: .35rem 1rem; clear: both;
+        font-weight: 400; color: var(--oa-text); text-align: inherit;
+        text-decoration: none; white-space: nowrap; background-color: transparent;
+        border: 0; cursor: pointer;
+      }
+      .oa-download-menu .dropdown-item:hover, .oa-download-menu .dropdown-item:focus {
+        color: var(--oa-link); background-color: var(--oa-hover-bg);
+      }
+      .oa-download-icon { font-size: .9em; }
+
+      .oa-detail-top { margin-bottom: .5rem; }
+      .oa-breadcrumb-link { color: var(--oa-link); text-decoration: none; cursor: pointer; }
+      .oa-breadcrumb-link:hover { text-decoration: underline; color: var(--oa-link); }
 
       .oa-badges { display: flex; flex-wrap: wrap; gap: .35rem; }
       .oa-description { color: var(--oa-text); white-space: pre-wrap; }
       .oa-breadcrumb .breadcrumb-item, .oa-breadcrumb .breadcrumb-item + .breadcrumb-item::before { color: var(--oa-muted); }
+      .oa-breadcrumb .breadcrumb-item.active { color: var(--oa-muted); }
 
       .oa-biblio-item { margin-bottom: .6rem; line-height: 1.4; }
       .oa-biblio-item:last-child { margin-bottom: 0; }
