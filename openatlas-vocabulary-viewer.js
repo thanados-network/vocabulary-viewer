@@ -875,25 +875,31 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
       </div>
     `);
 
-    // Header: title + category badge + selectable badge + counts + class
+    // Image (with link to high-res fileUrl and creator/license info)
+    const image = this.#renderImage(item.image);
+
+    // Header: title + category badge + selectable badge + counts + class, side-by-side with image thumbnail
     const catName = item.category ? (L.categories[item.category] || item.category) : '';
     const isSelectable = item.selectable !== false;
     const directCount = item.entityCount ?? item.count;
     const subsCount = item.entityCountSubs ?? item.countSubs;
 
     parts.push(`
-      <div class="oa-detail-header">
-        <h2 class="oa-detail-title h4 mb-2">${esc(item.name)}</h2>
-        <div class="oa-badges mb-2">
-          ${catName ? `<span class="badge oa-badge">${esc(catName)}</span>` : ''}
-          ${isSelectable
-            ? `<span class="badge text-bg-success" title="${esc(L.assignableHint)}">${esc(L.assignable)}</span>`
-            : `<span class="badge text-bg-warning text-dark" title="${esc(L.structuralNodeHint)}">${esc(L.notAssignable)}</span>`
-          }
-          ${directCount != null ? `<span class="badge oa-count-badge" title="${esc(L.directEntities)}">${L.entities}: ${esc(directCount)}</span>` : ''}
-          ${subsCount != null ? `<span class="badge oa-count-badge" title="${esc(L.subtypesEntities)}">${L.entitiesSubs}: ${esc(subsCount)}</span>` : ''}
-          ${item.class && item.class !== 'type' ? `<span class="badge oa-class-badge">${esc(item.class)}</span>` : ''}
+      <div class="oa-detail-header-wrap d-flex justify-content-between align-items-start gap-3 mb-2 flex-wrap">
+        <div class="oa-detail-header flex-grow-1">
+          <h2 class="oa-detail-title h4 mb-2">${esc(item.name)}</h2>
+          <div class="oa-badges mb-2">
+            ${catName ? `<span class="badge oa-badge">${esc(catName)}</span>` : ''}
+            ${isSelectable
+              ? `<span class="badge text-bg-success" title="${esc(L.assignableHint)}">${esc(L.assignable)}</span>`
+              : `<span class="badge text-bg-warning text-dark" title="${esc(L.structuralNodeHint)}">${esc(L.notAssignable)}</span>`
+            }
+            ${directCount != null ? `<span class="badge oa-count-badge" title="${esc(L.directEntities)}">${L.entities}: ${esc(directCount)}</span>` : ''}
+            ${subsCount != null ? `<span class="badge oa-count-badge" title="${esc(L.subtypesEntities)}">${L.entitiesSubs}: ${esc(subsCount)}</span>` : ''}
+            ${item.class && item.class !== 'type' ? `<span class="badge oa-class-badge">${esc(item.class)}</span>` : ''}
+          </div>
         </div>
+        ${image ? `<div class="oa-detail-header-image flex-shrink-0 ms-auto">${image}</div>` : ''}
       </div>
     `);
 
@@ -905,10 +911,6 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
         </div>
       `);
     }
-
-    // Image (with link to high-res fileUrl and creator/license info)
-    const image = this.#renderImage(item.image);
-    if (image) parts.push(image);
 
     // Description
     if (item.description) {
@@ -1253,19 +1255,16 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
     const fullUrl = image.fileUrl || primarySrc;
 
     return `
-      <div class="oa-section mt-3">
-        <label class="oa-field-label">${esc(L.image)}</label>
-        <div class="oa-image">
-          <a href="${esc(fullUrl)}" target="_blank" rel="noopener noreferrer" title="${esc(image.name || L.image)}">
-            <img src="${esc(primarySrc)}"
-                 data-fallback="${esc(fallbackSrc)}"
-                 alt="${esc(image.name || L.image)}"
-                 class="img-fluid rounded"
-                 loading="lazy"
-                 onerror="if (this.dataset.fallback && this.src !== this.dataset.fallback) { this.src = this.dataset.fallback; } else { this.style.display='none'; }">
-          </a>
-          ${metaParts.length ? `<div class="oa-image-meta small mt-1">${esc(metaParts.join(' \u2022 '))}</div>` : ''}
-        </div>
+      <div class="oa-image">
+        <a href="${esc(fullUrl)}" target="_blank" rel="noopener noreferrer" title="${esc(image.name || L.image)}">
+          <img src="${esc(primarySrc)}"
+               data-fallback="${esc(fallbackSrc)}"
+               alt="${esc(image.name || L.image)}"
+               class="img-fluid rounded"
+               loading="lazy"
+               onerror="if (this.dataset.fallback && this.src !== this.dataset.fallback) { this.src = this.dataset.fallback; } else { this.style.display='none'; }">
+        </a>
+        ${metaParts.length ? `<div class="oa-image-meta small mt-1 text-end">${esc(metaParts.join(' \u2022 '))}</div>` : ''}
       </div>
     `;
   }
@@ -1776,9 +1775,14 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
         color: var(--oa-text);
       }
 
-      .oa-image img {
+      .oa-image {
+        display: inline-block;
         max-width: 100%;
-        max-height: 320px;
+      }
+      .oa-image img {
+        max-width: 200px;
+        max-height: 160px;
+        width: auto;
         height: auto;
         display: block;
         border-radius: .375rem;
@@ -1789,6 +1793,8 @@ class OpenAtlasVocabularyViewer extends HTMLElement {
       .oa-image-meta {
         color: var(--oa-muted);
         font-size: .8em;
+        max-width: 200px;
+        word-break: break-word;
       }
 
       .oa-empty-detail .oa-empty-title { font-size: 1.1em; font-weight: 600; }
