@@ -40,16 +40,16 @@
       },
       "AgentListResponse": {
         "properties": {
-          "data": {
+          "agents": {
             "items": {
               "$ref": "#/components/schemas/AgentItem"
             },
-            "title": "Data",
+            "title": "Agents",
             "type": "array"
           }
         },
         "required": [
-          "data"
+          "agents"
         ],
         "title": "AgentListResponse",
         "type": "object"
@@ -132,16 +132,16 @@
       },
       "CaseStudyListResponse": {
         "properties": {
-          "data": {
+          "caseStudies": {
             "items": {
               "$ref": "#/components/schemas/CaseStudyItem"
             },
-            "title": "Data",
+            "title": "Casestudies",
             "type": "array"
           }
         },
         "required": [
-          "data"
+          "caseStudies"
         ],
         "title": "CaseStudyListResponse",
         "type": "object"
@@ -295,25 +295,6 @@
       },
       "FileItem": {
         "properties": {
-          "bounds": {
-            "anyOf": [
-              {
-                "items": {
-                  "items": {
-                    "type": "number"
-                  },
-                  "type": "array"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Leaflet image bounds in the form [[lat_sw, lon_sw], [lat_ne, lon_ne]].",
-            "title": "Bounds"
-          },
           "creators": {
             "description": "Authors, photographers, or creators of the file.",
             "items": {
@@ -377,19 +358,6 @@
             "default": null,
             "description": "URL to the IIIF Presentation API Manifest.",
             "title": "Iiifmanifesturl"
-          },
-          "inheritedFrom": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "The ID of the parent entity in the archaeological hierarchy from which this image is inherited.",
-            "title": "Inheritedfrom"
           },
           "license": {
             "anyOf": [
@@ -541,19 +509,6 @@
             "description": "Display name of the license.",
             "title": "Name",
             "type": "string"
-          },
-          "url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Official link to the legal deed or license text.",
-            "title": "Url"
           }
         },
         "required": [
@@ -561,6 +516,23 @@
           "name"
         ],
         "title": "LicenseItem",
+        "type": "object"
+      },
+      "LicensedFileOverviewResponse": {
+        "properties": {
+          "files": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FileItem"
+            },
+            "description": "Dictionary of licensed files, mapped by their ID",
+            "title": "Files",
+            "type": "object"
+          }
+        },
+        "required": [
+          "files"
+        ],
+        "title": "LicensedFileOverviewResponse",
         "type": "object"
       },
       "LinkedTypeItem": {
@@ -801,23 +773,6 @@
           }
         },
         "title": "PropertyI18n",
-        "type": "object"
-      },
-      "PublicFileOverviewResponse": {
-        "properties": {
-          "data": {
-            "description": "Dictionary of licensed files, mapped by their ID",
-            "items": {
-              "$ref": "#/components/schemas/FileItem"
-            },
-            "title": "Data",
-            "type": "array"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "PublicFileOverviewResponse",
         "type": "object"
       },
       "ReferenceModel": {
@@ -1292,27 +1247,27 @@
       },
       "VocabularyFlatResponse": {
         "properties": {
-          "data": {
+          "types": {
             "additionalProperties": {
               "$ref": "#/components/schemas/VocabularyFlatItem"
             },
-            "title": "Data",
+            "title": "Types",
             "type": "object"
           }
         },
         "required": [
-          "data"
+          "types"
         ],
         "title": "VocabularyFlatResponse",
         "type": "object"
       },
       "VocabularyStandardResponse": {
         "properties": {
-          "data": {
+          "results": {
             "items": {
               "$ref": "#/components/schemas/VocabularyTreeItem"
             },
-            "title": "Data",
+            "title": "Results",
             "type": "array"
           }
         },
@@ -1749,7 +1704,7 @@
               "default": 50,
               "description": "Number of records to return (max 100).",
               "maximum": 100,
-              "minimum": 1.0,
+              "minimum": 1,
               "title": "Limit",
               "type": "integer"
             }
@@ -1762,7 +1717,7 @@
             "schema": {
               "default": 1,
               "description": "Page number (starting at 1).",
-              "minimum": 1.0,
+              "minimum": 1,
               "title": "Page",
               "type": "integer"
             }
@@ -2230,16 +2185,79 @@
         ]
       }
     },
-    "/api/1/files/public": {
+    "/api/1/files/annotation/{id}/iiif/{version}": {
+      "get": {
+        "description": "Returns a specific IIIF annotation.",
+        "operationId": "api_v1_files_annotation__int_id__iiif__string_version__get",
+        "parameters": [
+          {
+            "description": "The ID of the annotation.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "The ID of the annotation.",
+              "title": "Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The IIIF version.",
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IiifVersion",
+              "description": "The IIIF version."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "IIIF Manifest JSON"
+          },
+          "400": {
+            "description": "Unsupported IIIF version"
+          },
+          "403": {
+            "description": "File without license or not shareable"
+          },
+          "404": {
+            "description": "File or annotation not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get IIIF Annotation",
+        "tags": [
+          "Files"
+        ]
+      }
+    },
+    "/api/1/files/licensed": {
       "get": {
         "description": "Retrieves all existing files with a license, their display URLs,</br>and metadata.",
-        "operationId": "api_v1_files_public_get",
+        "operationId": "api_v1_files_licensed_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PublicFileOverviewResponse"
+                  "$ref": "#/components/schemas/LicensedFileOverviewResponse"
                 }
               }
             },
@@ -2316,6 +2334,258 @@
         ]
       }
     },
+    "/api/1/files/{id}/iiif-annotation-list/{version}": {
+      "get": {
+        "description": "Returns the IIIF annotation list (v2) or page (v3).",
+        "operationId": "api_v1_files__int_id__iiif_annotation_list__string_version__get",
+        "parameters": [
+          {
+            "description": "The ID of the file.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "The ID of the file.",
+              "title": "Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The IIIF version.",
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IiifVersion",
+              "description": "The IIIF version."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "IIIF Manifest JSON"
+          },
+          "400": {
+            "description": "Unsupported IIIF version"
+          },
+          "403": {
+            "description": "File without license or not shareable"
+          },
+          "404": {
+            "description": "File or annotation not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get IIIF Annotation List/Page",
+        "tags": [
+          "Files"
+        ]
+      }
+    },
+    "/api/1/files/{id}/iiif-canvas/{version}": {
+      "get": {
+        "description": "Returns the IIIF canvas for a specific file and IIIF version.",
+        "operationId": "api_v1_files__int_id__iiif_canvas__string_version__get",
+        "parameters": [
+          {
+            "description": "The ID of the file.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "The ID of the file.",
+              "title": "Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The IIIF version.",
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IiifVersion",
+              "description": "The IIIF version."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "IIIF Manifest JSON"
+          },
+          "400": {
+            "description": "Unsupported IIIF version"
+          },
+          "403": {
+            "description": "File without license or not shareable"
+          },
+          "404": {
+            "description": "File or annotation not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get IIIF Canvas",
+        "tags": [
+          "Files"
+        ]
+      }
+    },
+    "/api/1/files/{id}/iiif-image/{version}": {
+      "get": {
+        "description": "Returns the IIIF image (annotation) for a specific file and version.",
+        "operationId": "api_v1_files__int_id__iiif_image__string_version__get",
+        "parameters": [
+          {
+            "description": "The ID of the file.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "The ID of the file.",
+              "title": "Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The IIIF version.",
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IiifVersion",
+              "description": "The IIIF version."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "IIIF Manifest JSON"
+          },
+          "400": {
+            "description": "Unsupported IIIF version"
+          },
+          "403": {
+            "description": "File without license or not shareable"
+          },
+          "404": {
+            "description": "File or annotation not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get IIIF Image",
+        "tags": [
+          "Files"
+        ]
+      }
+    },
+    "/api/1/files/{id}/iiif-manifest/{version}": {
+      "get": {
+        "description": "Returns the IIIF manifest for a specific file and IIIF version.",
+        "operationId": "api_v1_files__int_id__iiif_manifest__string_version__get",
+        "parameters": [
+          {
+            "description": "The ID of the file.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "The ID of the file.",
+              "title": "Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The IIIF version.",
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IiifVersion",
+              "description": "The IIIF version."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "IIIF Manifest JSON"
+          },
+          "400": {
+            "description": "Unsupported IIIF version"
+          },
+          "403": {
+            "description": "File without license or not shareable"
+          },
+          "404": {
+            "description": "File or annotation not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationErrorModel"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get IIIF Manifest",
+        "tags": [
+          "Files"
+        ]
+      }
+    },
     "/api/1/files/{id}/thumbnail": {
       "get": {
         "description": "Serves the static, pre-calculated thumbnail image.",
@@ -2377,321 +2647,6 @@
         "summary": "Get thumbnail image",
         "tags": [
           "Files"
-        ]
-      }
-    },
-    "/api/1/iiif/{id}/annotation-list/{version}": {
-      "get": {
-        "description": "Returns the IIIF annotation list (v2) or page (v3).",
-        "operationId": "api_v1_iiif__int_id__annotation_list__string_version__get",
-        "parameters": [
-          {
-            "description": "The ID of the file.",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "description": "The ID of the file.",
-              "title": "Id",
-              "type": "integer"
-            }
-          },
-          {
-            "description": "The IIIF version.",
-            "in": "path",
-            "name": "version",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/IiifVersion",
-              "description": "The IIIF version."
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {}
-            },
-            "description": "IIIF Annotation List/Page JSON"
-          },
-          "400": {
-            "description": "Unsupported IIIF version"
-          },
-          "403": {
-            "description": "File without license or not shareable"
-          },
-          "404": {
-            "description": "File not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ValidationErrorModel"
-                  },
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Unprocessable Content"
-          }
-        },
-        "summary": "Get IIIF Annotation List/Page",
-        "tags": [
-          "IIIF"
-        ]
-      }
-    },
-    "/api/1/iiif/{id}/annotation/{version}": {
-      "get": {
-        "description": "Returns a specific IIIF annotation.",
-        "operationId": "api_v1_iiif__int_id__annotation__string_version__get",
-        "parameters": [
-          {
-            "description": "The ID of the annotation.",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "description": "The ID of the annotation.",
-              "title": "Id",
-              "type": "integer"
-            }
-          },
-          {
-            "description": "The IIIF version.",
-            "in": "path",
-            "name": "version",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/IiifVersion",
-              "description": "The IIIF version."
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {}
-            },
-            "description": "IIIF Annotation JSON"
-          },
-          "400": {
-            "description": "Unsupported IIIF version"
-          },
-          "403": {
-            "description": "File without license or not shareable"
-          },
-          "404": {
-            "description": "Annotation or file not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ValidationErrorModel"
-                  },
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Unprocessable Content"
-          }
-        },
-        "summary": "Get IIIF Annotation",
-        "tags": [
-          "IIIF"
-        ]
-      }
-    },
-    "/api/1/iiif/{id}/canvas/{version}": {
-      "get": {
-        "description": "Returns the IIIF canvas for a specific file and IIIF version.",
-        "operationId": "api_v1_iiif__int_id__canvas__string_version__get",
-        "parameters": [
-          {
-            "description": "The ID of the file.",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "description": "The ID of the file.",
-              "title": "Id",
-              "type": "integer"
-            }
-          },
-          {
-            "description": "The IIIF version.",
-            "in": "path",
-            "name": "version",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/IiifVersion",
-              "description": "The IIIF version."
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {}
-            },
-            "description": "IIIF Canvas JSON"
-          },
-          "400": {
-            "description": "Unsupported IIIF version"
-          },
-          "403": {
-            "description": "File without license or not shareable"
-          },
-          "404": {
-            "description": "File not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ValidationErrorModel"
-                  },
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Unprocessable Content"
-          }
-        },
-        "summary": "Get IIIF Canvas",
-        "tags": [
-          "IIIF"
-        ]
-      }
-    },
-    "/api/1/iiif/{id}/image/{version}": {
-      "get": {
-        "description": "Returns the IIIF image (annotation) for a specific file and version.",
-        "operationId": "api_v1_iiif__int_id__image__string_version__get",
-        "parameters": [
-          {
-            "description": "The ID of the file.",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "description": "The ID of the file.",
-              "title": "Id",
-              "type": "integer"
-            }
-          },
-          {
-            "description": "The IIIF version.",
-            "in": "path",
-            "name": "version",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/IiifVersion",
-              "description": "The IIIF version."
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {}
-            },
-            "description": "IIIF Image JSON"
-          },
-          "400": {
-            "description": "Unsupported IIIF version"
-          },
-          "403": {
-            "description": "File without license or not shareable"
-          },
-          "404": {
-            "description": "File not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ValidationErrorModel"
-                  },
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Unprocessable Content"
-          }
-        },
-        "summary": "Get IIIF Image",
-        "tags": [
-          "IIIF"
-        ]
-      }
-    },
-    "/api/1/iiif/{id}/manifest/{version}": {
-      "get": {
-        "description": "Returns the IIIF manifest for a specific file and IIIF version.",
-        "operationId": "api_v1_iiif__int_id__manifest__string_version__get",
-        "parameters": [
-          {
-            "description": "The ID of the file.",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "description": "The ID of the file.",
-              "title": "Id",
-              "type": "integer"
-            }
-          },
-          {
-            "description": "The IIIF version.",
-            "in": "path",
-            "name": "version",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/IiifVersion",
-              "description": "The IIIF version."
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {}
-            },
-            "description": "IIIF Manifest JSON"
-          },
-          "400": {
-            "description": "Unsupported IIIF version"
-          },
-          "403": {
-            "description": "File without license or not shareable"
-          },
-          "404": {
-            "description": "File or annotation not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ValidationErrorModel"
-                  },
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Unprocessable Content"
-          }
-        },
-        "summary": "Get IIIF Manifest",
-        "tags": [
-          "IIIF"
         ]
       }
     },
@@ -2841,7 +2796,7 @@
               "default": 50,
               "description": "Number of records to return (max 100).",
               "maximum": 100,
-              "minimum": 1.0,
+              "minimum": 1,
               "title": "Limit",
               "type": "integer"
             }
@@ -2854,7 +2809,7 @@
             "schema": {
               "default": 1,
               "description": "Page number (starting at 1).",
-              "minimum": 1.0,
+              "minimum": 1,
               "title": "Page",
               "type": "integer"
             }
@@ -3691,12 +3646,8 @@
       "name": "LOD"
     },
     {
-      "description": "Display and licenses",
+      "description": "IIIF, display and licenses",
       "name": "Files"
-    },
-    {
-      "description": "IIIF endpoints",
-      "name": "IIIF"
     },
     {
       "description": "Project metadata and case studies",
