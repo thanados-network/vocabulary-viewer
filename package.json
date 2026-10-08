@@ -1,0 +1,32 @@
+{
+  "name": "openatlas-vocabulary-viewer",
+  "version": "1.0.0",
+  "description": "Native Web Component for browsing OpenAtlas type vocabulary",
+  "type": "module",
+  "main": "openatlas-vocabulary-viewer.js",
+  "module": "openatlas-vocabulary-viewer.js",
+  "exports": {
+    ".": "./openatlas-vocabulary-viewer.js"
+  },
+  "files": [
+    "openatlas-vocabulary-viewer.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "openatlas",
+    "vocabulary",
+    "web-component",
+    "custom-elements"
+  ],
+  "author": "Bernhard Koschicek-Krombholz",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thanados-network/vocabulary-viewer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/thanados-network/vocabulary-viewer/issues"
+  },
+  "homepage": "https://github.com/thanados-network/vocabulary-viewer#readme"
+}

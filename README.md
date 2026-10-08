@@ -386,25 +386,25 @@ If you want to use this component across multiple websites/projects, choose the 
 ### Option 1: Direct Git Dependency via `npm` / `package.json` (Recommended for modern web apps)
 You do not even need to publish to public npm; npm/yarn/pnpm can install directly from GitHub:
 ```bash
-npm install git+https://github.com/<owner>/vocabulary-viewer.git
+npm install git+https://github.com/thanados-network/vocabulary-viewer.git
 # or pin to a specific branch/tag/commit:
-npm install git+https://github.com/<owner>/vocabulary-viewer.git#v1.0.0
+npm install git+https://github.com/thanados-network/vocabulary-viewer.git#v1.0.0
 ```
 Then import it in your build setup (Vite, Webpack, Rollup, etc.):
 ```javascript
 import 'openatlas-vocabulary-viewer';
 ```
 
-### Option 2: Publish as an npm Package (`@openatlas/vocabulary-viewer`)
+### Option 2: Publish as an npm Package (`openatlas-vocabulary-viewer` or `@openatlas/vocabulary-viewer`)
 Best for versioned releases and CI/CD pipelines:
-1. Initialize/maintain `package.json` in this repository with `"main": "openatlas-vocabulary-viewer.js"`.
+1. `package.json` is already initialized with `"main": "openatlas-vocabulary-viewer.js"` and `"name": "openatlas-vocabulary-viewer"` (or adjust the package name/scope if publishing under an organization).
 2. Publish to npm (`npm publish`) or GitHub Packages.
-3. In both client websites: `npm install @openatlas/vocabulary-viewer`.
+3. In both client websites: `npm install openatlas-vocabulary-viewer` (or `@openatlas/vocabulary-viewer`).
 
 ### Option 3: Git Submodule or Subtree (Best for monorepos or multi-repo vendoring)
 Add this repository as a submodule in each website's repository:
 ```bash
-git submodule add https://github.com/<owner>/vocabulary-viewer.git vendor/vocabulary-viewer
+git submodule add https://github.com/thanados-network/vocabulary-viewer.git vendor/vocabulary-viewer
 ```
 Include the script in HTML:
 ```html
