@@ -639,6 +639,13 @@ class OpenAtlasVocabularyViewer extends HTMLElementBase {
     return [
       'tree-endpoint',
       'detail-endpoint',
+      'title-endpoint',
+      'header-title',
+      'custom-title',
+      'title',
+      'sidebar-width',
+      'master-width',
+      'resizable',
       'lang',
       'bootstrap-url',
       'font-family',
@@ -671,6 +678,12 @@ class OpenAtlasVocabularyViewer extends HTMLElementBase {
     this._activeId = null;
     /** @type {boolean} Whether Bootstrap has been injected already. */
     this._bootstrapInjected = false;
+    /** @type {string|null} Custom title override or programmatic title. */
+    this._customTitle = null;
+    /** @type {string|null} Title fetched from title-endpoint. */
+    this._fetchedTitle = null;
+    /** @type {boolean} Resizer drag wire flag. */
+    this._resizerWired = false;
   }
 
   /* ---------------------------------------------------------------------- */
@@ -679,50 +692,145 @@ class OpenAtlasVocabularyViewer extends HTMLElementBase {
 
   /** @returns {string} Configured tree endpoint URL. */
   get treeEndpoint() {
-    return this.getAttribute('tree-endpoint') || DEFAULT_TREE_ENDPOINT;
+    return this.getAttribute?.('tree-endpoint') || DEFAULT_TREE_ENDPOINT;
   }
 
   /** @returns {string} Configured detail endpoint URL template (with `{id}`). */
   get detailEndpoint() {
-    return this.getAttribute('detail-endpoint') || DEFAULT_DETAIL_ENDPOINT;
+    return this.getAttribute?.('detail-endpoint') || DEFAULT_DETAIL_ENDPOINT;
+  }
+
+  /** @returns {string} Configured title endpoint URL. */
+  get titleEndpoint() {
+    return this.getAttribute?.('title-endpoint') || '';
+  }
+
+  /** @param {string|null} val */
+  set titleEndpoint(val) {
+    if (val) {
+      this.setAttribute?.('title-endpoint', val);
+    } else {
+      this.removeAttribute?.('title-endpoint');
+    }
+  }
+
+  /** @returns {string} Configured header title (or empty string if default localized title is used). */
+  get headerTitle() {
+    return this.getAttribute?.('header-title') ||
+           this.getAttribute?.('custom-title') ||
+           this._customTitle ||
+           '';
+  }
+
+  /** @param {string|null} val */
+  set headerTitle(val) {
+    if (val !== null && val !== undefined && val !== '') {
+      this._customTitle = String(val);
+      this.setAttribute?.('header-title', String(val));
+    } else {
+      this._customTitle = null;
+      this.removeAttribute?.('header-title');
+      this.removeAttribute?.('custom-title');
+    }
+    this.#applyStaticLabels();
+  }
+
+  /** @returns {string} Effective component title. */
+  get title() {
+    return this.headerTitle || this.getAttribute?.('title') || '';
+  }
+
+  /** @param {string|null} val */
+  set title(val) {
+    this.headerTitle = val;
+  }
+
+  /** @returns {string} Configured sidebar (master column) width. */
+  get sidebarWidth() {
+    return this.getAttribute?.('sidebar-width') ||
+           this.getAttribute?.('master-width') ||
+           this._sidebarWidth ||
+           this.style?.getPropertyValue?.('--oa-master-width') ||
+           '350px';
+  }
+
+  /** @param {string|number|null} val */
+  set sidebarWidth(val) {
+    if (val !== null && val !== undefined && val !== '') {
+      const w = typeof val === 'number' ? `${val}px` : String(val).trim();
+      const parsed = /^\d+(\.\d+)?$/.test(w) ? `${w}px` : w;
+      this._sidebarWidth = parsed;
+      this.setAttribute?.('sidebar-width', parsed);
+      this.style?.setProperty?.('--oa-master-width', parsed);
+    } else {
+      this._sidebarWidth = null;
+      this.removeAttribute?.('sidebar-width');
+      this.removeAttribute?.('master-width');
+      this.style?.removeProperty?.('--oa-master-width');
+    }
+  }
+
+  /** @returns {string} Alias for sidebarWidth. */
+  get masterWidth() {
+    return this.sidebarWidth;
+  }
+
+  /** @param {string|number|null} val */
+  set masterWidth(val) {
+    this.sidebarWidth = val;
+  }
+
+  /** @returns {boolean} Whether the sidebar divider is resizable by the user. */
+  get resizable() {
+    if (this._resizable !== undefined && this._resizable !== null) {
+      return this._resizable;
+    }
+    return this.getAttribute?.('resizable') !== 'false';
+  }
+
+  /** @param {boolean|string} val */
+  set resizable(val) {
+    const bool = val !== false && val !== 'false';
+    this._resizable = bool;
+    this.setAttribute?.('resizable', String(bool));
   }
 
   /** @returns {string} Configured Bootstrap stylesheet URL. */
   get bootstrapUrl() {
-    return this.getAttribute('bootstrap-url') || DEFAULT_BOOTSTRAP_URL;
+    return this.getAttribute?.('bootstrap-url') || DEFAULT_BOOTSTRAP_URL;
   }
 
   /** @returns {string} Configured font family. */
   get fontFamily() {
-    return this.getAttribute('font-family') || this.style.getPropertyValue('--oa-font-family') || '';
+    return this.getAttribute?.('font-family') || this.style?.getPropertyValue?.('--oa-font-family') || '';
   }
 
   /** @param {string|null} val */
   set fontFamily(val) {
     if (val) {
-      this.setAttribute('font-family', val);
+      this.setAttribute?.('font-family', val);
     } else {
-      this.removeAttribute('font-family');
+      this.removeAttribute?.('font-family');
     }
   }
 
   /** @returns {string} Configured font size. */
   get fontSize() {
-    return this.getAttribute('font-size') || this.style.getPropertyValue('--oa-font-size') || '';
+    return this.getAttribute?.('font-size') || this.style?.getPropertyValue?.('--oa-font-size') || '';
   }
 
   /** @param {string|number|null} val */
   set fontSize(val) {
     if (val != null && val !== '') {
-      this.setAttribute('font-size', String(val));
+      this.setAttribute?.('font-size', String(val));
     } else {
-      this.removeAttribute('font-size');
+      this.removeAttribute?.('font-size');
     }
   }
 
   /** @returns {'en'|'de'} Active UI language (defaults to `en`). */
   get lang() {
-    const l = (this.getAttribute('lang') || 'en').toLowerCase();
+    const l = (this.getAttribute?.('lang') || 'en').toLowerCase();
     return l === 'de' ? 'de' : 'en';
   }
 
@@ -816,9 +924,18 @@ class OpenAtlasVocabularyViewer extends HTMLElementBase {
       this._ignoredIds = parseIds(this.getAttribute('exclude-ids') || this.getAttribute('ignored-ids'));
     }
 
+    if (this.hasAttribute('sidebar-width') || this.hasAttribute('master-width')) {
+      const w = this.getAttribute('sidebar-width') || this.getAttribute('master-width');
+      if (w) {
+        const parsed = /^\d+(\.\d+)?$/.test(w.trim()) ? `${w.trim()}px` : w.trim();
+        this.style.setProperty('--oa-master-width', parsed);
+      }
+    }
+
     this.#applyFont();
     this.#injectBootstrap();
     this.#applyStaticLabels();
+    this.#wireResizer();
 
     const search = this.shadowRoot.getElementById('search');
     if (search && !this._searchWired) {
@@ -846,6 +963,10 @@ class OpenAtlasVocabularyViewer extends HTMLElementBase {
       this._dismissWired = true;
     }
 
+    if (this.titleEndpoint && !this._customTitle && !this._fetchedTitle) {
+      this.loadTitle();
+    }
+
     // Load the tree only once when first connected.
     if (!this._rawTreeData && !this._treeData) {
       this.loadTree();
@@ -863,6 +984,32 @@ class OpenAtlasVocabularyViewer extends HTMLElementBase {
     if (!this.isConnected) return;
 
     switch (name) {
+      case 'header-title':
+      case 'custom-title':
+      case 'title':
+        this._customTitle = newValue;
+        this.#applyStaticLabels();
+        break;
+      case 'title-endpoint':
+        if (newValue) {
+          this.loadTitle(newValue);
+        } else {
+          this._fetchedTitle = null;
+          this.#applyStaticLabels();
+        }
+        break;
+      case 'sidebar-width':
+      case 'master-width':
+        if (newValue) {
+          const parsed = /^\d+(\.\d+)?$/.test(newValue.trim()) ? `${newValue.trim()}px` : newValue.trim();
+          this.style.setProperty('--oa-master-width', parsed);
+        } else {
+          this.style.removeProperty('--oa-master-width');
+        }
+        break;
+      case 'resizable':
+        // Evaluated via resizable getter and CSS selector
+        break;
       case 'font-family':
       case 'font-size':
         this.#applyFont();
@@ -1208,6 +1355,148 @@ class OpenAtlasVocabularyViewer extends HTMLElementBase {
    */
   setLanguage(lang) {
     this.setAttribute('lang', lang === 'de' ? 'de' : 'en');
+  }
+
+  /**
+   * Set the header title at runtime. Overrides the default localized title.
+   * Pass null or an empty string to restore the default title.
+   * @param {string|null} title Custom title text, or null/empty to reset to localized default.
+   * @returns {this}
+   */
+  setTitle(title) {
+    this.headerTitle = title;
+    return this;
+  }
+
+  /**
+   * Get the current effective title (custom title if set, otherwise localized default).
+   * @returns {string}
+   */
+  getTitle() {
+    return this.headerTitle || this._fetchedTitle || this.#labels.title;
+  }
+
+  /**
+   * Reset title to the default localized title.
+   * @returns {this}
+   */
+  resetTitle() {
+    this.headerTitle = null;
+    this._fetchedTitle = null;
+    this.#applyStaticLabels();
+    return this;
+  }
+
+  /**
+   * Set a custom title endpoint to dynamically fetch the title from a backend API.
+   * @param {string|null} url Endpoint URL.
+   * @returns {this}
+   */
+  setTitleEndpoint(url) {
+    this.titleEndpoint = url;
+    if (url) {
+      this.loadTitle();
+    }
+    return this;
+  }
+
+  /**
+   * Fetch the title from the configured `title-endpoint`.
+   * Accepts JSON ({ title: "..." }, { name: "..." }, { label: "..." }, { text: "..." }) or plain text.
+   * @param {string} [url] Optional URL override.
+   * @returns {Promise<string>}
+   * @fires oa-title-loaded
+   * @fires oa-vocabulary-error
+   */
+  async loadTitle(url = this.titleEndpoint) {
+    if (!url) return this.getTitle();
+    try {
+      const res = await fetch(url, { headers: { Accept: 'application/json, text/plain, */*' } });
+      if (!res.ok) throw new Error(`HTTP ${res.status} while loading title`);
+      const contentType = res.headers.get('content-type') || '';
+      let titleText = '';
+      if (contentType.includes('application/json')) {
+        const json = await res.json();
+        titleText = typeof json === 'string'
+          ? json
+          : (json?.title || json?.name || json?.label || json?.text || json?.value || json?.headerTitle || JSON.stringify(json));
+      } else {
+        const text = await res.text();
+        try {
+          const json = JSON.parse(text);
+          titleText = typeof json === 'string'
+            ? json
+            : (json?.title || json?.name || json?.label || json?.text || json?.value || json?.headerTitle || text);
+        } catch (_e) {
+          titleText = text.trim();
+        }
+      }
+      if (titleText) {
+        this._fetchedTitle = titleText;
+        this.#applyStaticLabels();
+        this.dispatchEvent(new CustomEvent('oa-title-loaded', {
+          bubbles: true, composed: true, detail: { title: titleText, url }
+        }));
+      }
+      return titleText;
+    } catch (error) {
+      this.#emitError(error, 'title');
+      return this.getTitle();
+    }
+  }
+
+  /**
+   * Set the sidebar / master column width at runtime.
+   * Accepts pixel numbers (e.g. 350) or CSS units (e.g. '350px', '22rem', '30%').
+   * @param {string|number} width
+   * @returns {this}
+   */
+  setSidebarWidth(width) {
+    this.sidebarWidth = width;
+    return this;
+  }
+
+  /**
+   * Alias for setSidebarWidth.
+   * @param {string|number} width
+   * @returns {this}
+   */
+  setMasterWidth(width) {
+    return this.setSidebarWidth(width);
+  }
+
+  /**
+   * Get the configured sidebar width.
+   * @returns {string}
+   */
+  getSidebarWidth() {
+    return this.sidebarWidth;
+  }
+
+  /**
+   * Alias for getSidebarWidth.
+   * @returns {string}
+   */
+  getMasterWidth() {
+    return this.sidebarWidth;
+  }
+
+  /**
+   * Enable or disable user-interactive sidebar resizing.
+   * @param {boolean} resizable
+   * @returns {this}
+   */
+  setResizable(resizable) {
+    this.resizable = resizable;
+    return this;
+  }
+
+  /**
+   * Check whether sidebar resizing is enabled.
+   * @returns {boolean}
+   */
+  isResizable() {
+    return this.resizable;
   }
 
   /**
@@ -2306,15 +2595,116 @@ class OpenAtlasVocabularyViewer extends HTMLElementBase {
   /** Apply static (non-data) labels such as header title and search placeholder. */
   #applyStaticLabels() {
     const L = this.#labels;
-    const title = this.shadowRoot.getElementById('oa-title');
-    if (title) title.textContent = L.title;
-    const search = this.shadowRoot.getElementById('search');
+    const title = this.shadowRoot?.getElementById('oa-title');
+    if (title) {
+      const custom = this.headerTitle || this._fetchedTitle;
+      title.textContent = custom || L.title;
+    }
+    const search = this.shadowRoot?.getElementById('search');
     if (search) search.setAttribute('placeholder', L.searchPlaceholder);
-    const empty = this.shadowRoot.getElementById('oa-empty-detail');
+    const empty = this.shadowRoot?.getElementById('oa-empty-detail');
     if (empty) {
       empty.querySelector('.oa-empty-title').textContent = L.emptyDetail;
       empty.querySelector('.oa-empty-hint').textContent = L.emptyDetailHint;
     }
+  }
+
+  /**
+   * Wire mouse, touch, and keyboard interactions for the resizable splitter between
+   * the master tree sidebar and the detail column.
+   */
+  #wireResizer() {
+    if (this._resizerWired) return;
+    const resizer = this.shadowRoot?.getElementById('oa-resizer');
+    const root = this.shadowRoot?.querySelector('.oa-root');
+    const master = this.shadowRoot?.getElementById('oa-master');
+    const body = this.shadowRoot?.getElementById('oa-body');
+    if (!resizer || !root || !master || !body) return;
+
+    let startX = 0;
+    let startWidth = 0;
+
+    const onPointerMove = (e) => {
+      const clientX = e.clientX ?? (e.touches && e.touches[0]?.clientX);
+      if (clientX === undefined) return;
+      const dx = clientX - startX;
+      const totalWidth = body.getBoundingClientRect().width;
+      const minW = 180;
+      const maxW = Math.max(minW, totalWidth - 180);
+      const newWidth = Math.min(Math.max(startWidth + dx, minW), maxW);
+
+      const pxVal = `${Math.round(newWidth)}px`;
+      this.style.setProperty('--oa-master-width', pxVal);
+      resizer.setAttribute('aria-valuenow', String(Math.round(newWidth)));
+      this.dispatchEvent(new CustomEvent('oa-sidebar-resized', {
+        bubbles: true, composed: true, detail: { width: Math.round(newWidth), widthCss: pxVal }
+      }));
+    };
+
+    const onPointerUp = () => {
+      root.classList.remove('oa-is-resizing');
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+      window.removeEventListener('touchmove', onPointerMove);
+      window.removeEventListener('touchend', onPointerUp);
+      window.removeEventListener('mousemove', onPointerMove);
+      window.removeEventListener('mouseup', onPointerUp);
+    };
+
+    const onPointerDown = (e) => {
+      if (!this.resizable) return;
+      if (e.button !== undefined && e.button !== 0) return;
+      startX = e.clientX ?? (e.touches && e.touches[0]?.clientX);
+      if (startX === undefined) return;
+      startWidth = master.getBoundingClientRect().width;
+      root.classList.add('oa-is-resizing');
+
+      window.addEventListener('pointermove', onPointerMove, { passive: false });
+      window.addEventListener('pointerup', onPointerUp);
+      window.addEventListener('pointercancel', onPointerUp);
+      window.addEventListener('touchmove', onPointerMove, { passive: false });
+      window.addEventListener('touchend', onPointerUp);
+      window.addEventListener('mousemove', onPointerMove);
+      window.addEventListener('mouseup', onPointerUp);
+      e.preventDefault();
+    };
+
+    resizer.addEventListener('pointerdown', onPointerDown);
+    resizer.addEventListener('touchstart', onPointerDown, { passive: false });
+    resizer.addEventListener('mousedown', onPointerDown);
+
+    resizer.addEventListener('keydown', (e) => {
+      if (!this.resizable) return;
+      const currentWidth = master.getBoundingClientRect().width;
+      const totalWidth = body.getBoundingClientRect().width;
+      const minW = 180;
+      const maxW = Math.max(minW, totalWidth - 180);
+      const step = e.shiftKey ? 30 : 10;
+      let newWidth = currentWidth;
+
+      if (e.key === 'ArrowLeft') {
+        newWidth = Math.max(currentWidth - step, minW);
+      } else if (e.key === 'ArrowRight') {
+        newWidth = Math.min(currentWidth + step, maxW);
+      } else if (e.key === 'Home') {
+        newWidth = minW;
+      } else if (e.key === 'End') {
+        newWidth = Math.min(500, maxW);
+      } else {
+        return;
+      }
+
+      e.preventDefault();
+      const pxVal = `${Math.round(newWidth)}px`;
+      this.style.setProperty('--oa-master-width', pxVal);
+      resizer.setAttribute('aria-valuenow', String(Math.round(newWidth)));
+      this.dispatchEvent(new CustomEvent('oa-sidebar-resized', {
+        bubbles: true, composed: true, detail: { width: Math.round(newWidth), widthCss: pxVal }
+      }));
+    });
+
+    this._resizerWired = true;
   }
 
   /**
@@ -2395,11 +2785,14 @@ class OpenAtlasVocabularyViewer extends HTMLElementBase {
           <h1 id="oa-title" class="oa-header-title h5 mb-2"></h1>
           <input id="search" type="search" class="form-control form-control-sm oa-search" autocomplete="off">
         </div>
-        <div class="oa-body">
-          <div class="oa-master">
+        <div class="oa-body" id="oa-body">
+          <div class="oa-master" id="oa-master">
             <div id="tree-container" class="oa-tree-container"></div>
           </div>
-          <div class="oa-detail-col">
+          <div class="oa-resizer" id="oa-resizer" role="separator" aria-orientation="vertical" aria-label="Resize tree sidebar" tabindex="0">
+            <div class="oa-resizer-handle"></div>
+          </div>
+          <div class="oa-detail-col" id="oa-detail-col">
             <div id="detail-panel" class="oa-detail-panel">
               <div id="oa-empty-detail" class="oa-empty-detail text-center text-body-secondary p-5">
                 <div class="oa-empty-title h6"></div>
@@ -2438,6 +2831,8 @@ class OpenAtlasVocabularyViewer extends HTMLElementBase {
         --oa-font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
         --oa-font-size: 1rem;
         --oa-height: 600px;
+        --oa-master-width: 350px;
+        --oa-sidebar-width: var(--oa-master-width);
 
         /* Map onto Bootstrap where useful. */
         --bs-primary: var(--oa-primary);
@@ -2486,16 +2881,70 @@ class OpenAtlasVocabularyViewer extends HTMLElementBase {
       .oa-header-title { color: var(--oa-text); margin: 0; font-size: 1.15em; font-weight: 600; line-height: 1.3; }
       .oa-search { font-size: .875em; color: var(--oa-text); background-color: var(--oa-bg); border-color: var(--oa-border); }
 
-      .oa-body { display: flex; flex: 1 1 auto; min-height: 0; }
+      .oa-body { display: flex; flex: 1 1 auto; min-height: 0; position: relative; }
 
       .oa-master {
-        width: 40%; min-width: 240px; max-width: 480px;
-        border-right: 1px solid var(--oa-border);
+        width: var(--oa-master-width, 350px);
+        min-width: 180px;
+        max-width: calc(100% - 180px);
+        flex: 0 0 auto;
         overflow: auto;
       }
       .oa-tree-container { padding: .5rem; }
 
-      .oa-detail-col { flex: 1 1 auto; overflow: auto; }
+      .oa-resizer {
+        width: 7px;
+        margin: 0 -3px;
+        background: transparent;
+        cursor: col-resize;
+        position: relative;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s ease, border-color 0.15s ease;
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: none;
+        flex: 0 0 7px;
+        border-left: 1px solid var(--oa-border);
+      }
+      .oa-resizer:hover, .oa-resizer:focus-visible, .oa-root.oa-is-resizing .oa-resizer {
+        background: var(--oa-primary);
+        border-left-color: var(--oa-primary);
+        outline: none;
+      }
+      .oa-resizer-handle {
+        width: 2px;
+        height: 28px;
+        border-radius: 1px;
+        background: var(--oa-border);
+        pointer-events: none;
+        transition: background 0.15s ease;
+      }
+      .oa-resizer:hover .oa-resizer-handle,
+      .oa-resizer:focus-visible .oa-resizer-handle,
+      .oa-root.oa-is-resizing .oa-resizer-handle {
+        background: var(--oa-active-text);
+      }
+      .oa-root.oa-is-resizing {
+        cursor: col-resize !important;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+      }
+      .oa-root.oa-is-resizing * {
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        cursor: col-resize !important;
+      }
+      :host([resizable="false"]) .oa-resizer {
+        display: none;
+      }
+      :host([resizable="false"]) .oa-master {
+        border-right: 1px solid var(--oa-border);
+      }
+
+      .oa-detail-col { flex: 1 1 auto; overflow: auto; min-width: 200px; }
 
       .oa-category + .oa-category { margin-top: .75rem; }
       .oa-category-title {

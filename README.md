@@ -85,6 +85,7 @@ openatlas-vocabulary-viewer {
 | `--oa-font-family`  | `'Inter', system-ui, …`                    | Component font family (inherited by all child elements) |
 | `--oa-font-size`    | `1rem`                                     | Base font size (headings, labels and controls scale proportionally) |
 | `--oa-height`       | `600px`                                    | Overall component height                    |
+| `--oa-master-width` | `350px`                                    | Base/fixed width of the left tree sidebar (alias: `--oa-sidebar-width`) |
 
 You can also fully swap Bootstrap by pointing `bootstrap-url` at a different (Bootstrap-compatible)
 stylesheet.
@@ -146,6 +147,10 @@ viewer.setFont({
 |-------------------|------------------------------------------------------------------|-------------------------------------------------------------------------|
 | `tree-endpoint`   | `http://127.0.0.1:5000/api/1/vocabulary/tree`            | URL of the vocabulary tree endpoint. Overrides `DEFAULT_TREE_ENDPOINT`. Changing it reloads the tree. |
 | `detail-endpoint` | `http://127.0.0.1:5000/api/1/vocabulary/{id}`            | URL template for type details; `{id}` is replaced with the type id. Overrides `DEFAULT_DETAIL_ENDPOINT`. |
+| `title-endpoint`  | `""`                                                             | Optional API endpoint URL to dynamically fetch and override the header title (JSON or plain text). |
+| `header-title`    | (localized default: `OpenAtlas Vocabulary`)                     | Custom header title text overriding the default localized title. Aliases: `custom-title`, `title`. |
+| `sidebar-width`   | `350px`                                                          | Fixed base width of the left tree sidebar (e.g. `'350px'`, `'24rem'`). Alias: `master-width`. |
+| `resizable`       | `true`                                                           | Whether the user can drag the splitter bar to resize the left tree sidebar (`"true"` / `"false"`). |
 | `bootstrap-url`   | `https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/.../bootstrap.min.css` | Bootstrap 5.3 stylesheet injected into the shadow root. Overrides `DEFAULT_BOOTSTRAP_URL`. |
 | `lang`            | `en`                                                             | UI language: `en` or `de`. Can be changed at runtime.                   |
 | `exclude-ids`     | `""`                                                             | Comma-separated or JSON array of IDs to ignore/exclude (e.g. `"209204, 213222"`). Mutually exclusive with `include-ids`. |
@@ -159,6 +164,19 @@ viewer.setFont({
 
 | Method / Property                           | Description                                                                                  |
 |---------------------------------------------|----------------------------------------------------------------------------------------------|
+| `setTitle(title)`                           | Sets the header title at runtime, overriding the localized default. Pass `null` to reset.     |
+| `getTitle()`                                | Returns the current effective title (custom title if set, or localized default).            |
+| `resetTitle()`                              | Resets the header title to the default localized string (`OpenAtlas Vocabulary`).            |
+| `setTitleEndpoint(url)`                     | Sets a custom endpoint URL and triggers `loadTitle()`.                                       |
+| `loadTitle(url?)`                           | Asynchronously fetches the title from the configured `title-endpoint`. Returns `Promise<string>`. |
+| `headerTitle` / `title`                     | Property accessors to get or set the header title override.                                  |
+| `titleEndpoint`                             | Property accessor for the dynamic title endpoint URL.                                       |
+| `setSidebarWidth(width)`                    | Sets the left column (master tree) width at runtime (accepts numbers e.g. `400` or `'400px'`). |
+| `getSidebarWidth()`                         | Returns the current configured sidebar width. Alias: `getMasterWidth()`.                    |
+| `setMasterWidth(width)`                     | Alias for `setSidebarWidth(width)`.                                                          |
+| `sidebarWidth` / `masterWidth`              | Property accessors for getting / setting the left column width.                              |
+| `setResizable(boolean)`                     | Enables or disables user-interactive splitter dragging (`true` / `false`).                  |
+| `isResizable()` / `resizable`               | Checks or sets whether the splitter bar is interactive/resizable.                            |
 | `loadTree()`                                | Fetches the tree from `tree-endpoint` and renders it. Returns a `Promise<void>`.             |
 | `renderTree(data)`                          | Renders (or re-renders) the tree from externally supplied data — no network needed.          |
 | `loadDetail(id)`                            | Fetches a type's detail, renders the detail panel, and dispatches `oa-vocabulary-selected`.  |
@@ -211,11 +229,17 @@ All events bubble and are `composed` (they cross the shadow boundary).
 |--------------------------|-----------------------------------------------|----------------------------------------------|
 | `oa-tree-loaded`         | `{ data: VocabularyTreeResponse }`            | The tree has been fetched and rendered.      |
 | `oa-vocabulary-selected` | `{ id: number, data: VocabularyFlatItem }`    | A type is selected and its detail loaded.    |
-| `oa-vocabulary-error`    | `{ error: Error, context: 'tree'\|'detail' }` | A tree or detail fetch fails.                |
+| `oa-title-loaded`        | `{ title: string, url: string }`              | The header title has been fetched from `title-endpoint`. |
+| `oa-sidebar-resized`     | `{ width: number, widthCss: string }`         | The left sidebar has been resized by the user or programmatically. |
+| `oa-vocabulary-error`    | `{ error: Error, context: 'tree'\|'detail'\|'title' }` | A tree, detail, or title fetch fails.       |
 
 ```js
 viewer.addEventListener('oa-vocabulary-selected', (e) => {
   console.log('Selected type', e.detail.id, e.detail.data);
+});
+
+viewer.addEventListener('oa-sidebar-resized', (e) => {
+  console.log('Sidebar resized to', e.detail.width, 'px');
 });
 
 viewer.addEventListener('oa-vocabulary-error', (e) => {

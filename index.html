@@ -155,6 +155,33 @@
       </div>
 
       <div>
+        <label for="custom-title">Custom Title</label>
+        <input id="custom-title" type="text" placeholder="e.g. Archaeology Type Vocabulary">
+      </div>
+      <button id="apply-title" type="button">Set Title</button>
+      <button id="reset-title" type="button">Reset Title</button>
+
+      <div>
+        <label for="title-endpoint">Title Endpoint</label>
+        <input id="title-endpoint" type="text" placeholder="e.g. /api/1/vocabulary/title">
+      </div>
+      <button id="apply-title-endpoint" type="button">Fetch Title</button>
+
+      <div>
+        <label for="sidebar-width">Sidebar Width</label>
+        <select id="sidebar-width">
+          <option value="350px">Default (350px)</option>
+          <option value="280px">Compact (280px)</option>
+          <option value="420px">Wide (420px)</option>
+          <option value="500px">Extra Wide (500px)</option>
+        </select>
+      </div>
+
+      <div>
+        <label><input id="toggle-resizable" type="checkbox" checked> Allow Resize (Draggable Splitter)</label>
+      </div>
+
+      <div>
         <label for="endpoint">Tree endpoint</label>
         <input id="endpoint" type="text"
                value="http://127.0.0.1:5000/api/1/vocabulary/tree">
@@ -229,7 +256,44 @@
       logLine('oa-tree-loaded  (vocabulary tree fetched and rendered)');
     });
 
+    viewer.addEventListener('oa-title-loaded', (e) => {
+      logLine(`oa-title-loaded  title="${e.detail.title}"  url="${e.detail.url}"`);
+    });
+
+    viewer.addEventListener('oa-sidebar-resized', (e) => {
+      logLine(`oa-sidebar-resized  width=${e.detail.width}px`);
+    });
+
     // ---- Controls -------------------------------------------------------
+    document.getElementById('apply-title').addEventListener('click', () => {
+      const val = document.getElementById('custom-title').value.trim();
+      viewer.setTitle(val);
+      logLine(`Set custom title: "${viewer.getTitle()}"`);
+    });
+
+    document.getElementById('reset-title').addEventListener('click', () => {
+      document.getElementById('custom-title').value = '';
+      viewer.resetTitle();
+      logLine(`Reset title to localized default: "${viewer.getTitle()}"`);
+    });
+
+    document.getElementById('apply-title-endpoint').addEventListener('click', () => {
+      const url = document.getElementById('title-endpoint').value.trim();
+      if (url) {
+        viewer.setTitleEndpoint(url);
+        logLine(`Set title endpoint: "${url}"`);
+      }
+    });
+
+    document.getElementById('sidebar-width').addEventListener('change', (e) => {
+      viewer.setSidebarWidth(e.target.value);
+      logLine(`Sidebar width set to: ${e.target.value}`);
+    });
+
+    document.getElementById('toggle-resizable').addEventListener('change', (e) => {
+      viewer.setResizable(e.target.checked);
+      logLine(`Sidebar resizable set to: ${e.target.checked}`);
+    });
     document.getElementById('lang').addEventListener('change', (e) => {
       // Either set the attribute or call the public method.
       viewer.setLanguage(e.target.value);
