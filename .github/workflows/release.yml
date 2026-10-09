@@ -20,7 +20,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Bump version and push tag
-        uses: phips28/gh-action-bump-version@v11.0.8
+        uses: phips28/gh-action-bump-version@v11.0.7
         with:
           tag-prefix: 'v'
           major-wording: 'BREAKING CHANGE,BREAKING-CHANGE,feat!,fix!'
