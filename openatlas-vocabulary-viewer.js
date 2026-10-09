@@ -153,6 +153,14 @@ function esc(value) {
     .replace(/'/g, '&#39;');
 }
 
+/** Capitalize the first letter of a string. @param {*} value @returns {string} */
+function capitalize(value) {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 /**
  * Parse an input of IDs (array, Set, comma-separated string, JSON array string, or single ID)
  * into a Set of numeric IDs.
@@ -1754,7 +1762,7 @@ class OpenAtlasVocabularyViewer extends HTMLElementBase {
     if (!isSelectable) {
       label.title = `${item.name || `#${item.id}`} (${this.#labels.notAssignable})`;
     } else if (Array.isArray(item.classes) && item.classes.length) {
-      label.title = `${item.name || `#${item.id}`} [${item.classes.join(', ')}]`;
+      label.title = `${item.name || `#${item.id}`} [${item.classes.map(capitalize).join(', ')}]`;
     }
     row.appendChild(label);
 
@@ -2116,7 +2124,7 @@ class OpenAtlasVocabularyViewer extends HTMLElementBase {
             }
             ${directCount != null ? `<span class="badge oa-count-badge" title="${esc(L.directEntities)}">${L.entities}: ${esc(directCount)}</span>` : ''}
             ${subsCount != null ? `<span class="badge oa-count-badge" title="${esc(L.subtypesEntities)}">${L.entitiesSubs}: ${esc(subsCount)}</span>` : ''}
-            ${item.class && item.class !== 'type' ? `<span class="badge oa-class-badge">${esc(item.class)}</span>` : ''}
+            ${item.class && item.class !== 'type' ? `<span class="badge oa-class-badge">${esc(capitalize(item.class))}</span>` : ''}
           </div>
         </div>
         ${image ? `<div class="oa-detail-header-image flex-shrink-0 ms-auto">${image}</div>` : ''}
@@ -2278,7 +2286,7 @@ class OpenAtlasVocabularyViewer extends HTMLElementBase {
   #renderClasses(classes) {
     if (!Array.isArray(classes) || !classes.length) return '';
     const L = this.#labels;
-    const badges = classes.map((c) => `<span class="badge oa-class-badge">${esc(c)}</span>`).join(' ');
+    const badges = classes.map((c) => `<span class="badge oa-class-badge">${esc(capitalize(c))}</span>`).join(' ');
     return `
       <div class="oa-section mt-3">
         <label class="oa-field-label">${esc(L.classes)}</label>
