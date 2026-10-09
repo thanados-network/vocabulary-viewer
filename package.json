@@ -1,6 +1,6 @@
 {
   "name": "openatlas-vocabulary-viewer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Native Web Component for browsing OpenAtlas type vocabulary",
   "type": "module",
   "main": "openatlas-vocabulary-viewer.js",
